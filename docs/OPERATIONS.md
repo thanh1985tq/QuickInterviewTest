@@ -16,9 +16,31 @@ For Neon, follow the copy-ready [Neon-to-Render setup guide](NEON_RENDER_SETUP.m
 4. Deploy. The build compiles the application and applies migrations; startup does not use SQLite or write persistent application state to disk.
 5. From a trusted workstation with temporary access to the production `DATABASE_URL`, run `npm run bootstrap-admin` with the bootstrap email/password variables. Remove the password variable immediately.
 6. Open `/login`, change the bootstrap password, and provision named users with least-privilege roles.
-7. Verify `/health`, `/ready`, HTTPS, the `Secure`/`HttpOnly`/`SameSite=Lax` session cookie, login/logout, and the admin audit trail.
+7. Optionally load the versioned starter library with the production seeding procedure below.
+8. Verify `/health`, `/ready`, HTTPS, the `Secure`/`HttpOnly`/`SameSite=Lax` session cookie, login/logout, and the admin audit trail.
 
 Never print or paste `DATABASE_URL`, session cookies, candidate tokens, runner tokens, or answers into deployment logs or tickets.
+
+## Load the starter question library
+
+Run this from a trusted workstation after migrations and administrator bootstrap. Use the direct Neon URL. The seed is idempotent: the first run publishes 40 questions, while later runs report them as skipped instead of duplicating them.
+
+```powershell
+$env:APP_PROFILE = 'local-postgres'
+$env:NODE_ENV = 'production'
+$env:DATABASE_URL = '<paste the direct Neon URL>'
+$env:SEED_ADMIN_EMAIL = 'admin@example.com'
+npm.cmd ci
+npm.cmd run migrate
+npm.cmd run seed:question-bank
+
+Remove-Item Env:SEED_ADMIN_EMAIL
+Remove-Item Env:DATABASE_URL
+Remove-Item Env:NODE_ENV
+Remove-Item Env:APP_PROFILE
+```
+
+The command creates no Render filesystem state. It writes through Node.js application services into PostgreSQL, publishes every question, and records versioned seed keys in `question_library_seeds`.
 
 ## Before sending an interview link
 

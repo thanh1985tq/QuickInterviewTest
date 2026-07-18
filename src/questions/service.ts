@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import type { Knex } from 'knex';
 import { writeAudit } from '../audit/service.js';
 import { fromJson, nowIso, toJson } from '../domain/types.js';
+import { assertActiveDomain } from '../domains/service.js';
 import { HttpError } from '../http/errors.js';
 import type { AuthContext } from '../auth/service.js';
 import type { QuestionInput } from './schemas.js';
@@ -71,6 +72,7 @@ async function replaceTags(transaction: Knex.Transaction, questionId: string, ta
 }
 
 export async function createQuestion(database: Knex, input: QuestionInput, auth: AuthContext, requestId?: string): Promise<string> {
+  await assertActiveDomain(database, input.domain);
   const questionId = randomUUID();
   const versionId = randomUUID();
   const timestamp = nowIso();
@@ -92,6 +94,7 @@ export async function createQuestion(database: Knex, input: QuestionInput, auth:
 export async function updateQuestion(
   database: Knex, questionId: string, input: QuestionInput, auth: AuthContext, requestId?: string,
 ): Promise<number> {
+  await assertActiveDomain(database, input.domain);
   return database.transaction(async (transaction) => {
     const question = await transaction<QuestionRow>('questions').where({ id: questionId }).first();
     if (!question) throw new HttpError(404, 'QUESTION_NOT_FOUND', 'Question was not found');
@@ -184,7 +187,7 @@ export async function duplicateQuestion(database: Knex, questionId: string, auth
   const source = await getQuestion(database, questionId);
   return createQuestion(database, {
     title: `${source.title} (copy)`, description: source.description, prompt: source.prompt,
-    domain: source.domain as QuestionInput['domain'], type: source.type as QuestionInput['type'],
+    domain: source.domain, type: source.type as QuestionInput['type'],
     difficulty: source.difficulty as QuestionInput['difficulty'],
     expectedDurationMinutes: source.expectedDurationMinutes, maximumScore: source.maximumScore,
     choices: source.choices as QuestionInput['choices'], answerKey: source.answerKey as QuestionInput['answerKey'],

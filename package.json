@@ -21,6 +21,7 @@
     "migrate": "tsx src/cli/migrate.ts",
     "migrate:rollback": "tsx src/cli/migrate.ts rollback",
     "bootstrap-admin": "tsx src/cli/bootstrap-admin.ts",
+    "seed:question-bank": "tsx src/cli/seed-question-bank.ts",
     "backup:sqlite": "tsx src/cli/backup-sqlite.ts",
     "retention": "tsx src/cli/retention.ts",
     "check": "npm run typecheck && npm run lint && npm test && npm run build"

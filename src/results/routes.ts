@@ -2,7 +2,8 @@ import { Router } from 'express';
 import type { Knex } from 'knex';
 import { z } from 'zod';
 import { getAuth } from '../auth/middleware.js';
-import { attemptStates, domains } from '../domain/types.js';
+import { attemptStates } from '../domain/types.js';
+import { domainSlugSchema } from '../domains/schemas.js';
 import {
   addManualScore, addReviewComment, getResult, listResults, resultsToCsv, type ResultFilters,
 } from './service.js';
@@ -10,7 +11,7 @@ import {
 const filtersSchema = z.object({
   candidate: z.string().trim().max(300).optional(),
   templateId: z.string().uuid().optional(),
-  domain: z.enum(domains).optional(),
+  domain: domainSlugSchema.optional(),
   status: z.enum(attemptStates).optional(),
   from: z.iso.datetime().optional(),
   to: z.iso.datetime().optional(),

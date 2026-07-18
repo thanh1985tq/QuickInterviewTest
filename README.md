@@ -1,6 +1,6 @@
 # QuickInterviewTest
 
-QuickInterviewTest is a lightweight system for quickly creating, delivering, and reviewing Automation Testing and Performance Testing interviews. Standard Web is the default delivery channel; a fixed Colab + Gradio runner is available as an experimental option for selected attempts.
+QuickInterviewTest is a lightweight system for quickly creating, delivering, and reviewing technical interviews. It starts with Automation Testing and Performance Testing domains, and administrators can add more domains without changing the application. Standard Web is the default delivery channel; a fixed Colab + Gradio runner is available as an experimental option for selected attempts.
 
 The Express/TypeScript backend is the source of truth for questions, immutable test snapshots, attempts, deadlines, answers, scoring, and results. Local standalone development uses SQLite. Render deployments use external PostgreSQL and never rely on the Render filesystem for persistent data.
 
@@ -27,22 +27,26 @@ Set a temporary bootstrap credential in the terminal, run the bootstrap, and the
 ```text
 set BOOTSTRAP_ADMIN_EMAIL=admin@example.com
 set BOOTSTRAP_ADMIN_PASSWORD=replace-with-a-long-unique-password
+set SEED_ADMIN_EMAIL=admin@example.com
 npm run bootstrap-admin
+npm run seed:question-bank
 npm run dev
 ```
 
-On PowerShell, use `$env:BOOTSTRAP_ADMIN_EMAIL='…'` and `$env:BOOTSTRAP_ADMIN_PASSWORD='…'`. Open `http://localhost:3000/login`. The bootstrap user must change the temporary password before administrative APIs are available.
+For the seed command, also set `SEED_ADMIN_EMAIL` to the bootstrapped administrator email. On PowerShell, use `$env:BOOTSTRAP_ADMIN_EMAIL='...'`, `$env:BOOTSTRAP_ADMIN_PASSWORD='...'`, and `$env:SEED_ADMIN_EMAIL='...'`. Open `http://localhost:3000/login`. The bootstrap user must change the temporary password before administrative APIs are available.
 
 The default `.env.example` selects `local-sqlite` and writes only to the ignored `./data` directory. Use `local-postgres` plus `DATABASE_URL` to develop against PostgreSQL. Run `npm run migrate` after switching databases; no data is copied automatically.
 
 ## Main workflows
 
 1. Bootstrap an admin, then provision `INTERVIEWER` and `REVIEWER` users through `/api/admin/users`.
-2. Create and publish questions through `/api/questions`, then compose and publish a template through `/api/templates`.
-3. Create an independent Standard Web or Colab attempt through `/api/test-instances`. Candidate and runner tokens are disclosed only in the creation response.
-4. Standard Web candidates use `/test/{candidateToken}`. Autosave and submission write directly to the configured database.
-5. Review automatic/manual scores, comments, history, and exports through `/api/results`.
-6. For Lab Mode, use the fixed notebook at `/lab/QuickInterviewTest.ipynb` and wait for deployment state `READY` before sharing the Gradio link.
+2. Manage active interview disciplines through Domain Management. Archiving a domain prevents new content while preserving existing questions, templates, and results.
+3. Load the optional 40-question starter library with `npm run seed:question-bank`, or create and publish questions through `/api/questions`.
+4. Compose and publish a template through `/api/templates`.
+5. Create an independent Standard Web or Colab attempt through `/api/test-instances`. Candidate and runner tokens are disclosed only in the creation response.
+6. Standard Web candidates use `/test/{candidateToken}`. Autosave and submission write directly to the configured database.
+7. Review automatic/manual scores, comments, history, and exports through `/api/results`.
+8. For Lab Mode, use the fixed notebook at `/lab/QuickInterviewTest.ipynb` and wait for deployment state `READY` before sharing the Gradio link.
 
 Administrative mutations require the `X-CSRF-Token` returned by `/api/auth/login` or `/api/auth/session`. Candidate and runner APIs use their distinct bearer credentials.
 
@@ -54,6 +58,7 @@ Administrative mutations require the `X-CSRF-Token` returned by `/api/auth/login
 | `npm run build && npm start` | Compile and start the production server. |
 | `npm run migrate` | Apply portable SQLite/PostgreSQL migrations. |
 | `npm run bootstrap-admin` | Create or rotate the bootstrap administrator from environment variables. |
+| `npm run seed:question-bank` | Idempotently publish 20 Automation and 20 Performance Testing starter questions. |
 | `npm run backup:sqlite` | Create an online, timestamped local SQLite backup. |
 | `npm run retention` | Remove expired ephemeral records; optionally anonymize one candidate. |
 | `npm run check` | Type-check, lint, run API/domain tests, and build. |
@@ -74,7 +79,7 @@ npm audit --audit-level=high
 
 - [Architecture](docs/ARCHITECTURE.md), [data model](docs/DATA_MODEL.md), [security model](docs/SECURITY.md)
 - [Environment profiles](docs/ENVIRONMENT.md) and [delivery-mode matrix](docs/DELIVERY_MODES.md)
-- [Colab runner](docs/COLAB_RUNNER.md), [backup and portability](docs/BACKUP_AND_PORTABILITY.md), [data retention](docs/DATA_RETENTION.md)
+- [Starter question library](docs/QUESTION_LIBRARY.md), [Colab runner](docs/COLAB_RUNNER.md), [backup and portability](docs/BACKUP_AND_PORTABILITY.md), [data retention](docs/DATA_RETENTION.md)
 - [Render operations](docs/OPERATIONS.md), [Neon-to-Render setup](docs/NEON_RENDER_SETUP.md), [security checklist](docs/SECURITY_CHECKLIST.md), and [pilot/release checklist](docs/PILOT_RELEASE.md)
 
 See `render.yaml` for the Render Free web-service configuration. Production requires an external PostgreSQL `DATABASE_URL`, HTTPS `BASE_URL`, `APP_PROFILE=render-postgres`, and `NODE_ENV=production`. For Neon, also set direct `MIGRATION_DATABASE_URL`; the runtime `DATABASE_URL` should be pooled.

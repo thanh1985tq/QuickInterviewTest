@@ -6,7 +6,11 @@ test('administrator creates a Standard Web attempt and the candidate submits it'
   await page.getByLabel('Password').fill('correct horse battery staple');
   await page.getByRole('button', { name: 'Sign in' }).click();
   await expect(page).toHaveURL(/\/admin$/);
-  await expect(page.locator('#identity')).toContainText('ADMIN');
+  await expect(page.locator('#account-role')).toContainText('Admin');
+  await page.locator('a[data-route="domains"]').click();
+  await expect(page.locator('#page-title')).toHaveText('Domain management');
+  await page.locator('a[data-route="questions"]').click();
+  await expect(page.locator('#page-title')).toHaveText('Question bank');
 
   const session = await page.request.get('/api/auth/session');
   const csrf = ((await session.json()) as { csrfToken: string }).csrfToken;

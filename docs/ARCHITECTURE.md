@@ -2,7 +2,7 @@
 
 ## Purpose and scope
 
-QuickInterviewTest is a single-tenant interview assessment application for Automation Testing and Performance Testing. Version 1 supports a reliable Standard Web candidate experience and an optional, experimental Colab + Gradio renderer. The Node.js application is the only authority for identities, tests, attempts, answers, deadlines, scoring, and results.
+QuickInterviewTest is a single-tenant interview assessment application with an administrator-managed domain catalog. Automation Testing and Performance Testing are the initial domains, and additional disciplines can be added without a code release. Version 1 supports a reliable Standard Web candidate experience and an optional, experimental Colab + Gradio renderer. The Node.js application is the only authority for identities, tests, attempts, answers, deadlines, scoring, and results.
 
 Version 1 deliberately does not execute candidate-provided code or test scripts. Code answers are stored and reviewed as plain text. It also excludes public administrator registration, automatic email, proctoring, AI scoring, multi-tenant billing, high-availability Colab hosting, and database synchronization.
 
@@ -35,8 +35,9 @@ PostgreSQL is mandatory in the `render-postgres` profile. The Render filesystem 
 1. An administrator is created with the offline bootstrap command; there is no registration endpoint.
 2. Login verifies a memory-hard password hash and creates an opaque, database-backed session.
 3. Administrative mutations require a valid session, role permission, and session-bound CSRF token.
-4. Question/template publication creates immutable versions.
-5. Creating an attempt snapshots the selected published question versions and issues a scoped, expiring candidate token.
+4. Administrators maintain the domain catalog; archived domains retain history but reject new authoring.
+5. Question/template publication creates immutable versions.
+6. Creating an attempt snapshots the selected published question versions and issues a scoped, expiring candidate token.
 
 ### Standard Web flow
 
@@ -61,10 +62,10 @@ PostgreSQL is mandatory in the `render-postgres` profile. The Render filesystem 
 - Database timestamps are written from the application for cross-database consistency.
 - Errors use a stable JSON envelope with a request ID; logs are structured JSON with sensitive fields redacted.
 - Mutations run in transactions where multiple records must change together.
+- Domain slugs are validated against the active database-backed catalog for authoring and import operations.
 - Status values are checked in domain services and database constraints where portable.
 - APIs are namespaced under `/api`; administrative APIs require sessions, candidate APIs require candidate tokens, and runner APIs require runner credentials.
 
 ## Deployment topology
 
 The Render web service binds to `0.0.0.0:$PORT`, trusts one reverse-proxy hop, uses HTTPS-aware secure cookies, and connects to an external PostgreSQL database through `DATABASE_URL`. Migrations are an explicit release command. `/health` reports process liveness; `/ready` performs a database probe. A redeploy can discard the application filesystem without losing state.
-

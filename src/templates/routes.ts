@@ -2,7 +2,8 @@ import { Router } from 'express';
 import type { Knex } from 'knex';
 import { z } from 'zod';
 import { getAuth } from '../auth/middleware.js';
-import { domains, lifecycleStatuses } from '../domain/types.js';
+import { lifecycleStatuses } from '../domain/types.js';
+import { domainSlugSchema } from '../domains/schemas.js';
 import { templateInputSchema } from './schemas.js';
 import {
   archiveTemplate, createTemplate, getTemplate, mapTemplateVersion, previewTemplate, publishTemplate,
@@ -17,7 +18,7 @@ interface TemplateListRow extends TemplateVersionRow {
 
 const listSchema = z.object({
   search: z.string().trim().max(200).optional(),
-  domain: z.enum(domains).optional(),
+  domain: domainSlugSchema.optional(),
   status: z.enum(lifecycleStatuses).optional(),
 }).strict();
 

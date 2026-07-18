@@ -11,8 +11,8 @@ export const questionTypes = [
 ] as const;
 export type QuestionType = typeof questionTypes[number];
 
-export const domains = ['AUTOMATION_TESTING', 'PERFORMANCE_TESTING'] as const;
-export type QuestionDomain = typeof domains[number];
+export const defaultDomainSlugs = ['AUTOMATION_TESTING', 'PERFORMANCE_TESTING'] as const;
+export type QuestionDomain = string;
 
 export const lifecycleStatuses = ['DRAFT', 'PUBLISHED', 'ARCHIVED'] as const;
 export type LifecycleStatus = typeof lifecycleStatuses[number];

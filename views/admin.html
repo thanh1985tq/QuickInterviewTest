@@ -3,24 +3,48 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Administration · QuickInterviewTest</title>
-    <link rel="stylesheet" href="/styles.css">
-    <script src="/admin.js" defer></script>
+    <meta name="theme-color" content="#101828">
+    <title>Interview Operations · QuickInterviewTest</title>
+    <link rel="stylesheet" href="/styles.css?v=3">
+    <script src="/admin.js?v=3" defer></script>
   </head>
-  <body>
-    <header class="topbar"><a href="/admin">QuickInterviewTest</a><button id="logout" class="link-button">Sign out</button></header>
-    <main class="workspace">
-      <span class="eyebrow">Administration</span>
-      <h1>Interview workspace</h1>
-      <p id="identity">Loading your administrative session…</p>
-      <nav class="module-grid" aria-label="Administrative modules">
-        <a href="#questions"><strong>Question bank</strong><span>Author and publish versioned questions.</span></a>
-        <a href="#templates"><strong>Test templates</strong><span>Compose reusable, validated assessments.</span></a>
-        <a href="#attempts"><strong>Candidate attempts</strong><span>Create scoped links and monitor progress.</span></a>
-        <a href="#results"><strong>Results</strong><span>Score, comment, audit, and export.</span></a>
-        <a href="#users"><strong>Users & audit</strong><span>Provision roles and inspect administration history.</span></a>
-      </nav>
-      <section id="app-module" class="panel"><p>Select a module to begin.</p></section>
-    </main>
+  <body class="admin-body">
+    <div class="admin-shell">
+      <aside class="admin-sidebar" id="admin-sidebar">
+        <a class="admin-brand" href="#overview" aria-label="QuickInterviewTest overview">
+          <span class="brand-mark">QI</span>
+          <span><strong>QuickInterview</strong><small>Test operations</small></span>
+        </a>
+        <nav class="admin-nav" aria-label="Administrative modules">
+          <a href="#overview" data-route="overview"><span class="nav-mark">OV</span><span><strong>Overview</strong><small>Workspace health</small></span></a>
+          <a href="#domains" data-route="domains" data-admin-only><span class="nav-mark">DM</span><span><strong>Domains</strong><small>Interview catalog</small></span></a>
+          <a href="#questions" data-route="questions"><span class="nav-mark">QB</span><span><strong>Question bank</strong><small>Author and publish</small></span></a>
+          <a href="#templates" data-route="templates"><span class="nav-mark">TP</span><span><strong>Templates</strong><small>Compose assessments</small></span></a>
+          <a href="#attempts" data-route="attempts"><span class="nav-mark">CA</span><span><strong>Candidate attempts</strong><small>Invite and monitor</small></span></a>
+          <a href="#results" data-route="results"><span class="nav-mark">RS</span><span><strong>Results</strong><small>Review and score</small></span></a>
+          <a href="#users" data-route="users" data-admin-only><span class="nav-mark">UA</span><span><strong>Users & audit</strong><small>Access controls</small></span></a>
+        </nav>
+        <div class="sidebar-account">
+          <span class="account-avatar" id="account-avatar">A</span>
+          <span><strong id="account-email">Loading…</strong><small id="account-role">Session</small></span>
+          <button id="logout" class="icon-button" type="button" aria-label="Sign out">↗</button>
+        </div>
+      </aside>
+      <div class="admin-main">
+        <header class="admin-header">
+          <button id="nav-toggle" class="icon-button nav-toggle" type="button" aria-label="Open navigation">☰</button>
+          <div>
+            <p class="page-kicker" id="page-kicker">Interview operations</p>
+            <h1 id="page-title">Overview</h1>
+            <p id="page-description">Loading your workspace…</p>
+          </div>
+          <div class="environment-chip"><span></span> Production workspace</div>
+        </header>
+        <div id="message-stack" class="message-stack" aria-live="polite"></div>
+        <main id="app-module" class="admin-content" tabindex="-1">
+          <div class="loading-state"><span class="spinner"></span><p>Preparing your workspace…</p></div>
+        </main>
+      </div>
+    </div>
   </body>
 </html>

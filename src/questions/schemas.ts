@@ -1,5 +1,6 @@
 import { z } from 'zod';
-import { domains, questionTypes } from '../domain/types.js';
+import { questionTypes } from '../domain/types.js';
+import { domainSlugSchema } from '../domains/schemas.js';
 
 const choiceSchema = z.object({
   id: z.string().min(1).max(100).regex(/^[A-Za-z0-9_-]+$/),
@@ -10,7 +11,7 @@ export const questionInputSchema = z.object({
   title: z.string().trim().min(1).max(300),
   description: z.string().trim().max(5000).default(''),
   prompt: z.string().trim().min(1).max(50_000),
-  domain: z.enum(domains),
+  domain: domainSlugSchema,
   type: z.enum(questionTypes),
   difficulty: z.enum(['JUNIOR', 'MID', 'SENIOR', 'EXPERT']),
   expectedDurationMinutes: z.number().int().min(1).max(240),

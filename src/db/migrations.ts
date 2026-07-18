@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import type { Knex } from 'knex';
 
 interface Migration {
@@ -286,7 +287,51 @@ const initialSchema: Migration = {
   },
 };
 
-const migrations: Record<string, Migration> = { '001_initial_schema': initialSchema };
+const domainManagement: Migration = {
+  async up(database) {
+    await database.schema.createTable('domains', (table) => {
+      table.uuid('id').primary();
+      table.string('slug', 40).notNullable().unique();
+      table.string('name', 120).notNullable();
+      table.text('description').notNullable().defaultTo('');
+      table.boolean('is_active').notNullable().defaultTo(true);
+      table.uuid('created_by_user_id').nullable().references('id').inTable('users').onDelete('SET NULL');
+      table.text('created_at').notNullable();
+      table.text('updated_at').notNullable();
+      table.index(['is_active', 'name']);
+    });
+
+    const timestamp = new Date().toISOString();
+    await database('domains').insert([
+      {
+        id: randomUUID(), slug: 'AUTOMATION_TESTING', name: 'Automation Testing',
+        description: 'Web, API, mobile, test architecture, CI, and quality engineering automation.',
+        is_active: true, created_by_user_id: null, created_at: timestamp, updated_at: timestamp,
+      },
+      {
+        id: randomUUID(), slug: 'PERFORMANCE_TESTING', name: 'Performance Testing',
+        description: 'Workload modeling, load generation, observability, analysis, and performance engineering.',
+        is_active: true, created_by_user_id: null, created_at: timestamp, updated_at: timestamp,
+      },
+    ]);
+
+    await database.schema.createTable('question_library_seeds', (table) => {
+      table.string('seed_key', 160).primary();
+      table.uuid('question_id').notNullable().unique().references('id').inTable('questions').onDelete('CASCADE');
+      table.text('created_at').notNullable();
+    });
+  },
+
+  async down(database) {
+    await database.schema.dropTableIfExists('question_library_seeds');
+    await database.schema.dropTableIfExists('domains');
+  },
+};
+
+const migrations: Record<string, Migration> = {
+  '001_initial_schema': initialSchema,
+  '002_domain_management': domainManagement,
+};
 
 export async function migrateDatabase(database: Knex): Promise<void> {
   await database.migrate.latest({

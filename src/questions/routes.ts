@@ -2,7 +2,8 @@ import { Router } from 'express';
 import type { Knex } from 'knex';
 import { z } from 'zod';
 import { getAuth } from '../auth/middleware.js';
-import { domains, lifecycleStatuses, questionTypes } from '../domain/types.js';
+import { lifecycleStatuses, questionTypes } from '../domain/types.js';
+import { domainSlugSchema } from '../domains/schemas.js';
 import {
   archiveQuestion, createQuestion, duplicateQuestion, getQuestion, mapQuestionVersion,
   publishQuestion, type QuestionVersionRow, updateQuestion,
@@ -17,7 +18,7 @@ interface QuestionListRow extends QuestionVersionRow {
 
 const listSchema = z.object({
   search: z.string().trim().max(200).optional(),
-  domain: z.enum(domains).optional(),
+  domain: domainSlugSchema.optional(),
   type: z.enum(questionTypes).optional(),
   status: z.enum(lifecycleStatuses).optional(),
   tag: z.string().trim().max(100).optional(),

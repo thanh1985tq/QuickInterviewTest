@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { domains } from '../domain/types.js';
+import { domainSlugSchema } from '../domains/schemas.js';
 
 const sectionSchema = z.object({
   key: z.string().min(1).max(100).regex(/^[A-Za-z0-9_-]+$/),
@@ -18,7 +18,7 @@ const templateQuestionSchema = z.object({
 export const templateInputSchema = z.object({
   title: z.string().trim().min(1).max(300),
   description: z.string().trim().max(10_000).default(''),
-  domain: z.enum(domains),
+  domain: domainSlugSchema,
   targetSeniority: z.enum(['JUNIOR', 'MID', 'SENIOR', 'EXPERT', 'MIXED']),
   durationMinutes: z.number().int().min(1).max(480),
   randomizeQuestions: z.boolean().default(false),

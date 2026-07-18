@@ -14,6 +14,7 @@ import { requireAuth, requireCsrfForMutations, requirePasswordChangeResolved } f
 import { createAuthRouter } from './auth/routes.js';
 import type { AppConfig } from './config.js';
 import { databaseReady } from './db/connection.js';
+import { createDomainsRouter } from './domains/routes.js';
 import { errorHandler, HttpError, notFoundHandler } from './http/errors.js';
 import { requestId } from './http/request-id.js';
 import { createQuestionsRouter } from './questions/routes.js';
@@ -92,6 +93,7 @@ export function createApp(dependencies: AppDependencies): Express {
   app.use('/api/runner', runnerExchangeLimiter, createRunnerRouter(database, config));
 
   app.use('/api/admin', requireAuth(database, ['ADMIN']), requirePasswordChangeResolved, requireCsrfForMutations, createAdminUsersRouter(database));
+  app.use('/api/domains', requireAuth(database, ['ADMIN', 'INTERVIEWER', 'REVIEWER']), requirePasswordChangeResolved, requireCsrfForMutations, createDomainsRouter(database));
   app.use('/api/questions', requireAuth(database, ['ADMIN', 'INTERVIEWER']), requirePasswordChangeResolved, requireCsrfForMutations, createQuestionsRouter(database));
   app.use('/api/templates', requireAuth(database, ['ADMIN', 'INTERVIEWER']), requirePasswordChangeResolved, requireCsrfForMutations, createTemplatesRouter(database));
   app.use('/api/test-instances', requireAuth(database, ['ADMIN', 'INTERVIEWER']), requirePasswordChangeResolved, requireCsrfForMutations, createTestInstancesRouter(database, config));

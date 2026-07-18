@@ -3,6 +3,7 @@ import type { Knex } from 'knex';
 import { writeAudit } from '../audit/service.js';
 import type { AuthContext } from '../auth/service.js';
 import { fromJson, nowIso, toJson } from '../domain/types.js';
+import { assertActiveDomain } from '../domains/service.js';
 import { HttpError } from '../http/errors.js';
 import type { QuestionVersionRow } from '../questions/service.js';
 import type { TemplateInput } from './schemas.js';
@@ -106,6 +107,7 @@ async function replaceTemplateQuestions(transaction: Knex.Transaction, templateV
 }
 
 export async function createTemplate(database: Knex, input: TemplateInput, auth: AuthContext, requestId?: string): Promise<string> {
+  await assertActiveDomain(database, input.domain);
   await validateQuestions(database, input);
   const templateId = randomUUID();
   const versionId = randomUUID();
@@ -128,6 +130,7 @@ export async function createTemplate(database: Knex, input: TemplateInput, auth:
 export async function updateTemplate(
   database: Knex, templateId: string, input: TemplateInput, auth: AuthContext, requestId?: string,
 ): Promise<number> {
+  await assertActiveDomain(database, input.domain);
   await validateQuestions(database, input);
   return database.transaction(async (transaction) => {
     const template = await transaction<TemplateRow>('test_templates').where({ id: templateId }).first();

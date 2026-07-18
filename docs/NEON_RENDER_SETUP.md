@@ -63,22 +63,27 @@ During deployment, the build command compiles the application and runs migration
 Do this once from a trusted workstation. Use the direct Neon URL and temporary environment variables; do not store the bootstrap password in Render.
 
 ```powershell
+$temporaryPassword = node -e "console.log(require('node:crypto').randomBytes(24).toString('base64url'))"
 $env:APP_PROFILE = 'local-postgres'
 $env:NODE_ENV = 'production'
 $env:DATABASE_URL = '<paste the direct Neon URL>'
 $env:BOOTSTRAP_ADMIN_EMAIL = 'admin@example.com'
-$env:BOOTSTRAP_ADMIN_PASSWORD = '<long, unique temporary password>'
-npm ci
-npm run bootstrap-admin
+$env:BOOTSTRAP_ADMIN_PASSWORD = $temporaryPassword
+npm.cmd ci
+npm.cmd run bootstrap-admin
+Write-Host "Temporary password: $temporaryPassword"
 
 Remove-Item Env:BOOTSTRAP_ADMIN_PASSWORD
 Remove-Item Env:BOOTSTRAP_ADMIN_EMAIL
 Remove-Item Env:DATABASE_URL
 Remove-Item Env:NODE_ENV
 Remove-Item Env:APP_PROFILE
+$temporaryPassword = $null
 ```
 
 Open the production `/login` page and sign in. The bootstrap administrator must change the temporary password before administrative APIs become available.
+
+To add the optional 40-question starter library, follow **Load the starter question library** in [Render operations](OPERATIONS.md). Use the same direct Neon URL and the existing administrator email; the seed is safe to rerun.
 
 ## 4. Verify the connection
 

@@ -19,12 +19,15 @@ describe('portable core schema', () => {
     const context = await createTestContext();
     database = context.database;
     const required = [
-      'users', 'user_sessions', 'login_attempts', 'questions', 'question_versions', 'tags', 'question_tags',
+      'users', 'user_sessions', 'login_attempts', 'domains', 'questions', 'question_versions', 'tags', 'question_tags',
       'test_templates', 'test_template_versions', 'test_template_questions', 'test_instances',
       'test_instance_questions', 'candidates', 'candidate_attempts', 'answers', 'attempt_events',
-      'deployments', 'runner_tokens', 'scores', 'review_comments', 'admin_audit_log',
+      'deployments', 'runner_tokens', 'scores', 'review_comments', 'admin_audit_log', 'question_library_seeds',
     ];
     for (const table of required) expect(await database.schema.hasTable(table), table).toBe(true);
+    expect(await database('domains').orderBy('slug').pluck('slug')).toEqual([
+      'AUTOMATION_TESTING', 'PERFORMANCE_TESTING',
+    ]);
   });
 
   it('enforces unique and referential constraints', async () => {

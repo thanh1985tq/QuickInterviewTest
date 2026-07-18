@@ -15,12 +15,14 @@ All primary keys are UUIDs and all timestamps represent UTC. JSON values are sto
 
 | Table | Purpose and important constraints |
 | --- | --- |
+| `domains` | Administrator-managed interview disciplines. Unique stable slug, editable display name/description, and active/archive state. |
 | `questions` | Stable question identity, author, current lifecycle status, and current version number. |
 | `question_versions` | Immutable published revisions plus editable draft revisions. Contains type, prompt, choices, scoring configuration, rubric, duration, and maximum score. Unique `(question_id, version)`. |
 | `tags` | Unique normalized skill tag. |
 | `question_tags` | Many-to-many link with composite uniqueness. |
+| `question_library_seeds` | Idempotency registry that maps each versioned starter-library key to the question it created. |
 
-A published version is never updated. Editing a published question creates the next draft version. Archiving changes discoverability, not historical snapshots.
+A published version is never updated. Editing a published question creates the next draft version. Archiving changes discoverability, not historical snapshots. Domain slugs are stable references; renaming a domain changes only its display metadata. Archiving a domain blocks new questions/templates in that domain but preserves all historical content.
 
 ## Templates and test instances
 
@@ -61,4 +63,3 @@ Candidate tokens, session IDs, runner exchange tokens, runner credentials, and G
 - Portable application-level status validation supplements database constraints.
 - Migration order is identical for both engines and migration history is stored in the selected database.
 - There is no connection or synchronization process between the SQLite and PostgreSQL environments.
-

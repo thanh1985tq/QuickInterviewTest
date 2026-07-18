@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { writeAudit } from '../audit/service.js';
 import type { AuthContext } from '../auth/service.js';
 import { fromJson, lifecycleStatuses, nowIso, toJson } from '../domain/types.js';
+import { assertActiveDomain } from '../domains/service.js';
 import { HttpError } from '../http/errors.js';
 import { questionInputSchema, type QuestionInput } from '../questions/schemas.js';
 import type { QuestionVersionRow } from '../questions/service.js';
@@ -143,6 +144,9 @@ export async function importQuestionBank(
   database: Knex, rawDocument: unknown, dryRun: boolean, auth: AuthContext, requestId?: string,
 ): Promise<{ dryRun: boolean; imported: number; conflicts: ImportConflict[] }> {
   const document = questionBankDocumentSchema.parse(rawDocument);
+  for (const domain of new Set(document.questions.flatMap((question) => question.versions.map((version) => version.data.domain)))) {
+    await assertActiveDomain(database, domain);
+  }
   const conflicts = await questionConflicts(database, document);
   if (dryRun) return { dryRun: true, imported: 0, conflicts };
   if (conflicts.length) throw new HttpError(409, 'IMPORT_CONFLICT', 'Question import has conflicts', conflicts);
@@ -246,6 +250,9 @@ export async function importTemplates(
   database: Knex, rawDocument: unknown, dryRun: boolean, auth: AuthContext, requestId?: string,
 ): Promise<{ dryRun: boolean; imported: number; conflicts: ImportConflict[] }> {
   const document = templatesDocumentSchema.parse(rawDocument);
+  for (const domain of new Set(document.templates.flatMap((template) => template.versions.map((version) => version.data.domain)))) {
+    await assertActiveDomain(database, domain);
+  }
   const conflicts = await templateConflicts(database, document);
   if (dryRun) return { dryRun: true, imported: 0, conflicts };
   if (conflicts.length) throw new HttpError(409, 'IMPORT_CONFLICT', 'Template import has conflicts', conflicts);
