@@ -7,7 +7,7 @@ import { createLogger } from './logger.js';
 const config = loadConfig();
 const logger = createLogger(config.logLevel);
 const database = createDatabase(config);
-await migrateDatabase(database);
+if (config.profile !== 'render-postgres') await migrateDatabase(database);
 const app = createApp({ config, database, logger });
 
 const server = app.listen(config.port, config.host, () => {

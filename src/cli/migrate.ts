@@ -1,8 +1,8 @@
-import { loadConfig } from '../config.js';
+import { loadMigrationConfig } from '../config.js';
 import { createDatabase } from '../db/connection.js';
 import { migrateDatabase, rollbackDatabase } from '../db/migrations.js';
 
-const config = loadConfig();
+const config = loadMigrationConfig();
 const database = createDatabase(config);
 
 try {

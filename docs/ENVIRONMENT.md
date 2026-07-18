@@ -9,7 +9,7 @@ Configuration is parsed once on startup. Invalid or contradictory values fail fa
 | `local-sqlite` | `SQLITE_PATH` | HTTP permitted | Default standalone development |
 | `local-postgres` | `DATABASE_URL` | HTTP permitted | Local PostgreSQL development |
 | `test` | temporary `SQLITE_PATH`, or `TEST_DATABASE_URL` | HTTP permitted | Automated tests |
-| `render-postgres` | `DATABASE_URL` required | HTTPS/secure required | Render web service |
+| `render-postgres` | `DATABASE_URL` required; separate migration URL recommended | HTTPS/secure required | Render web service |
 
 `render-postgres` rejects a SQLite configuration. SQLite files must not be placed on the Render filesystem. Profiles never synchronize with one another.
 
@@ -23,6 +23,7 @@ Configuration is parsed once on startup. Invalid or contradictory values fail fa
 | `PORT` | `3000` | HTTP port assigned by Render in cloud mode. |
 | `BASE_URL` | `http://localhost:3000` | Public absolute application URL. |
 | `DATABASE_URL` | PostgreSQL profiles | PostgreSQL URL; never logged. |
+| `MIGRATION_DATABASE_URL` | Optional; falls back to `DATABASE_URL` | Direct PostgreSQL URL used only by migration commands. For Neon, use the non-pooler URL. |
 | `SQLITE_PATH` | `./data/quick-interview.sqlite` | Local SQLite file or `:memory:` in tests. |
 | `LOG_LEVEL` | `info` | Pino log level. |
 | `SESSION_TTL_MINUTES` | `480` | Administrative session lifetime. |
@@ -36,5 +37,4 @@ Configuration is parsed once on startup. Invalid or contradictory values fail fa
 | `BOOTSTRAP_ADMIN_EMAIL` | bootstrap only | Initial administrator email. |
 | `BOOTSTRAP_ADMIN_PASSWORD` | bootstrap only | Initial administrator password; remove after use. |
 
-See `.env.example` for a safe local template. Production secrets belong in Render environment configuration, not in files.
-
+See `.env.example` for a safe local template. Production secrets belong in Render environment configuration, not in files. The [Neon-to-Render guide](NEON_RENDER_SETUP.md) shows the recommended pooled runtime/direct migration setup.

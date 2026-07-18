@@ -8,9 +8,11 @@ The service binds to `0.0.0.0:$PORT`, trusts one Render proxy hop, sets secure s
 
 ## First deployment
 
-1. Provision an external PostgreSQL database with TLS, backups, and an application-specific user/database.
+For Neon, follow the copy-ready [Neon-to-Render setup guide](NEON_RENDER_SETUP.md). It explains where to copy the two connection strings, how to configure a new or existing Render service, how to bootstrap the first administrator, and how to verify the connection.
+
+1. Provision an external PostgreSQL database with TLS, backups, and an application-specific user/database. For Neon, copy both the pooled web URL and direct migration URL.
 2. Create the Render service from `render.yaml`.
-3. Set `DATABASE_URL` as a secret, `BASE_URL` to the final `https://…onrender.com` URL, `APP_PROFILE=render-postgres`, and `NODE_ENV=production`. Review all variables in `docs/ENVIRONMENT.md`.
+3. Set pooled `DATABASE_URL`, direct `MIGRATION_DATABASE_URL`, and `BASE_URL` as secrets; set `APP_PROFILE=render-postgres` and `NODE_ENV=production`. Review all variables in `docs/ENVIRONMENT.md`.
 4. Deploy. The build compiles the application and applies migrations; startup does not use SQLite or write persistent application state to disk.
 5. From a trusted workstation with temporary access to the production `DATABASE_URL`, run `npm run bootstrap-admin` with the bootstrap email/password variables. Remove the password variable immediately.
 6. Open `/login`, change the bootstrap password, and provision named users with least-privilege roles.
@@ -29,7 +31,7 @@ Never print or paste `DATABASE_URL`, session cookies, candidate tokens, runner t
 
 1. Take or confirm a recent provider backup.
 2. Run CI, including PostgreSQL and Chromium jobs, and review `npm audit --audit-level=high`.
-3. Apply migrations exactly once through the Render build command. Migrations are transactional where the database supports it and recorded in PostgreSQL.
+3. Apply migrations exactly once through the Render build command. For Neon, the migration command uses direct `MIGRATION_DATABASE_URL`; normal web traffic uses pooled `DATABASE_URL`. Migrations are transactional where the database supports it and recorded in PostgreSQL.
 4. Warm `/status`, run an admin smoke test, and run a disposable Standard Web attempt.
 5. Check logs for errors and confirm a redeploy preserved the session/content/attempt data in PostgreSQL.
 

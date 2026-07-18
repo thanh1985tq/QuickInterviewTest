@@ -1,7 +1,7 @@
 import request from 'supertest';
 import { afterEach, describe, expect, it } from 'vitest';
 import type { Knex } from 'knex';
-import { loadConfig } from '../src/config.js';
+import { loadConfig, loadMigrationConfig } from '../src/config.js';
 import { createApp } from '../src/app.js';
 import { createLogger } from '../src/logger.js';
 import { createTestContext } from './helpers.js';
@@ -51,6 +51,24 @@ describe('foundation', () => {
   it('fails fast on invalid cloud database configuration', () => {
     expect(() => loadConfig({ APP_PROFILE: 'render-postgres', NODE_ENV: 'production' })).toThrow(/DATABASE_URL/);
     expect(() => loadConfig({ APP_PROFILE: 'render-postgres', NODE_ENV: 'development', DATABASE_URL: 'postgresql://example' })).toThrow(/production/);
+  });
+
+  it('uses a direct PostgreSQL URL only for migrations when configured', () => {
+    const env = {
+      APP_PROFILE: 'render-postgres',
+      NODE_ENV: 'production',
+      DATABASE_URL: 'postgresql://pooled.example/database',
+      MIGRATION_DATABASE_URL: 'postgresql://direct.example/database',
+    };
+
+    expect(loadConfig(env).database).toEqual({
+      client: 'postgres',
+      url: 'postgresql://pooled.example/database',
+    });
+    expect(loadMigrationConfig(env).database).toEqual({
+      client: 'postgres',
+      url: 'postgresql://direct.example/database',
+    });
   });
 
   it('returns a stable error envelope without stack traces', async () => {

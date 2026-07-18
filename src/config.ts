@@ -10,6 +10,7 @@ const rawConfigSchema = z.object({
   PORT: z.coerce.number().int().min(1).max(65_535).default(3000),
   BASE_URL: z.string().url().default('http://localhost:3000'),
   DATABASE_URL: z.string().min(1).optional(),
+  MIGRATION_DATABASE_URL: z.string().min(1).optional(),
   SQLITE_PATH: z.string().min(1).default('./data/quick-interview.sqlite'),
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).default('info'),
   SESSION_TTL_MINUTES: z.coerce.number().int().positive().default(480),
@@ -73,5 +74,17 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     heartbeatOfflineSeconds: parsed.HEARTBEAT_OFFLINE_SECONDS,
     dataRetentionDays: parsed.DATA_RETENTION_DAYS,
     secureCookies: parsed.APP_PROFILE === 'render-postgres' || parsed.NODE_ENV === 'production',
+  };
+}
+
+export function loadMigrationConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
+  const config = loadConfig(env);
+  const migrationUrl = rawConfigSchema.parse(env).MIGRATION_DATABASE_URL;
+
+  if (config.database.client !== 'postgres' || !migrationUrl) return config;
+
+  return {
+    ...config,
+    database: { client: 'postgres', url: migrationUrl },
   };
 }

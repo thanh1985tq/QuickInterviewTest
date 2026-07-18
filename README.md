@@ -75,6 +75,6 @@ npm audit --audit-level=high
 - [Architecture](docs/ARCHITECTURE.md), [data model](docs/DATA_MODEL.md), [security model](docs/SECURITY.md)
 - [Environment profiles](docs/ENVIRONMENT.md) and [delivery-mode matrix](docs/DELIVERY_MODES.md)
 - [Colab runner](docs/COLAB_RUNNER.md), [backup and portability](docs/BACKUP_AND_PORTABILITY.md), [data retention](docs/DATA_RETENTION.md)
-- [Render operations](docs/OPERATIONS.md), [security checklist](docs/SECURITY_CHECKLIST.md), and [pilot/release checklist](docs/PILOT_RELEASE.md)
+- [Render operations](docs/OPERATIONS.md), [Neon-to-Render setup](docs/NEON_RENDER_SETUP.md), [security checklist](docs/SECURITY_CHECKLIST.md), and [pilot/release checklist](docs/PILOT_RELEASE.md)
 
-See `render.yaml` for the Render Free web-service configuration. Production requires an external PostgreSQL `DATABASE_URL`, HTTPS `BASE_URL`, `APP_PROFILE=render-postgres`, and `NODE_ENV=production`.
+See `render.yaml` for the Render Free web-service configuration. Production requires an external PostgreSQL `DATABASE_URL`, HTTPS `BASE_URL`, `APP_PROFILE=render-postgres`, and `NODE_ENV=production`. For Neon, also set direct `MIGRATION_DATABASE_URL`; the runtime `DATABASE_URL` should be pooled.
