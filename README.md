@@ -1,2 +1,80 @@
 # QuickInterviewTest
-This project for quick create interview on Gradio temporary
+
+QuickInterviewTest is a lightweight system for quickly creating, delivering, and reviewing Automation Testing and Performance Testing interviews. Standard Web is the default delivery channel; a fixed Colab + Gradio runner is available as an experimental option for selected attempts.
+
+The Express/TypeScript backend is the source of truth for questions, immutable test snapshots, attempts, deadlines, answers, scoring, and results. Local standalone development uses SQLite. Render deployments use external PostgreSQL and never rely on the Render filesystem for persistent data.
+
+## Version 1 safety boundary
+
+- Administrative login and role authorization are required for authoring, publishing, candidate management, and review. There is no public registration endpoint.
+- Candidates receive unguessable, scoped, expiring links; session, candidate, runner, and Gradio secrets are stored only as hashes.
+- Candidate code and scripts are collected as plain text. The system never executes submitted Python, shell, Selenium, Playwright, k6, JMeter, Locust, or other code.
+- Published question/template versions and per-candidate snapshots are immutable.
+- SQLite and PostgreSQL are separate environments. JSON import/export is explicit; there is no synchronization process.
+
+## Local SQLite quick start
+
+Requirements: Node.js 22 or newer and npm.
+
+```text
+npm install
+copy .env.example .env
+npm run migrate
+```
+
+Set a temporary bootstrap credential in the terminal, run the bootstrap, and then remove it:
+
+```text
+set BOOTSTRAP_ADMIN_EMAIL=admin@example.com
+set BOOTSTRAP_ADMIN_PASSWORD=replace-with-a-long-unique-password
+npm run bootstrap-admin
+npm run dev
+```
+
+On PowerShell, use `$env:BOOTSTRAP_ADMIN_EMAIL='…'` and `$env:BOOTSTRAP_ADMIN_PASSWORD='…'`. Open `http://localhost:3000/login`. The bootstrap user must change the temporary password before administrative APIs are available.
+
+The default `.env.example` selects `local-sqlite` and writes only to the ignored `./data` directory. Use `local-postgres` plus `DATABASE_URL` to develop against PostgreSQL. Run `npm run migrate` after switching databases; no data is copied automatically.
+
+## Main workflows
+
+1. Bootstrap an admin, then provision `INTERVIEWER` and `REVIEWER` users through `/api/admin/users`.
+2. Create and publish questions through `/api/questions`, then compose and publish a template through `/api/templates`.
+3. Create an independent Standard Web or Colab attempt through `/api/test-instances`. Candidate and runner tokens are disclosed only in the creation response.
+4. Standard Web candidates use `/test/{candidateToken}`. Autosave and submission write directly to the configured database.
+5. Review automatic/manual scores, comments, history, and exports through `/api/results`.
+6. For Lab Mode, use the fixed notebook at `/lab/QuickInterviewTest.ipynb` and wait for deployment state `READY` before sharing the Gradio link.
+
+Administrative mutations require the `X-CSRF-Token` returned by `/api/auth/login` or `/api/auth/session`. Candidate and runner APIs use their distinct bearer credentials.
+
+## Commands
+
+| Command | Purpose |
+| --- | --- |
+| `npm run dev` | Start the TypeScript development server with reload. |
+| `npm run build && npm start` | Compile and start the production server. |
+| `npm run migrate` | Apply portable SQLite/PostgreSQL migrations. |
+| `npm run bootstrap-admin` | Create or rotate the bootstrap administrator from environment variables. |
+| `npm run backup:sqlite` | Create an online, timestamped local SQLite backup. |
+| `npm run retention` | Remove expired ephemeral records; optionally anonymize one candidate. |
+| `npm run check` | Type-check, lint, run API/domain tests, and build. |
+| `npm run test:e2e` | Run the Chromium admin-to-candidate workflow. |
+
+## Verification
+
+The automated suite covers authentication/roles/CSRF, rate limiting, portable schema constraints, publication immutability, template validation, scoped and expired candidate tokens, autosave/resume/idempotency, submission locking, objective/manual scoring, exports/import conflicts, runner-token reuse, Lab relaunch/recovery, heartbeat loss, security headers, and log redaction. PostgreSQL migration parity runs in CI with PostgreSQL 16.
+
+```text
+npm run check
+npx playwright install chromium
+npm run test:e2e
+npm audit --audit-level=high
+```
+
+## Documentation
+
+- [Architecture](docs/ARCHITECTURE.md), [data model](docs/DATA_MODEL.md), [security model](docs/SECURITY.md)
+- [Environment profiles](docs/ENVIRONMENT.md) and [delivery-mode matrix](docs/DELIVERY_MODES.md)
+- [Colab runner](docs/COLAB_RUNNER.md), [backup and portability](docs/BACKUP_AND_PORTABILITY.md), [data retention](docs/DATA_RETENTION.md)
+- [Render operations](docs/OPERATIONS.md), [security checklist](docs/SECURITY_CHECKLIST.md), and [pilot/release checklist](docs/PILOT_RELEASE.md)
+
+See `render.yaml` for the Render Free web-service configuration. Production requires an external PostgreSQL `DATABASE_URL`, HTTPS `BASE_URL`, `APP_PROFILE=render-postgres`, and `NODE_ENV=production`.
