@@ -96,6 +96,22 @@ describe('question bank and templates', () => {
     expect(await context.database('questions').count<{ count: number }[]>({ count: '*' })).toEqual([{ count: 1 }]);
   });
 
+  it('publishes selected draft questions in one batch', async () => {
+    const context = await authenticatedContext();
+    const first = await request(context.app).post('/api/questions')
+      .set('Cookie', context.cookie).set('X-CSRF-Token', context.csrf)
+      .send(singleChoice({ title: 'Batch publish one' })).expect(201);
+    const second = await request(context.app).post('/api/questions')
+      .set('Cookie', context.cookie).set('X-CSRF-Token', context.csrf)
+      .send(singleChoice({ title: 'Batch publish two' })).expect(201);
+    const response = await request(context.app).post('/api/questions/batch/publish')
+      .set('Cookie', context.cookie).set('X-CSRF-Token', context.csrf)
+      .send({ questionIds: [(first.body as { id: string }).id, (second.body as { id: string }).id] }).expect(200);
+    expect((response.body as { published: number }).published).toBe(2);
+    const statuses = await context.database('questions').orderBy('created_at').pluck<string[]>('status');
+    expect(statuses).toEqual(['PUBLISHED', 'PUBLISHED']);
+  });
+
   it('builds and versions a validated template using only published questions', async () => {
     const context = await authenticatedContext();
     const question = await request(context.app).post('/api/questions')

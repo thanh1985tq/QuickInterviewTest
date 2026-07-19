@@ -114,6 +114,15 @@ function actionButton(text, action, secondary = false) {
   return control;
 }
 
+function shuffled(values) {
+  const output = [...values];
+  for (let index = output.length - 1; index > 0; index -= 1) {
+    const swap = Math.floor(Math.random() * (index + 1));
+    [output[index], output[swap]] = [output[swap], output[index]];
+  }
+  return output;
+}
+
 function showMessage(text, error = false) {
   const message = node('div', { class: error ? 'toast error' : 'toast success', role: error ? 'alert' : 'status' });
   message.append(node('strong', {}, error ? 'Action needed' : 'Done'), node('span', {}, text));
@@ -312,12 +321,19 @@ function questionDetail(question) {
   modal(question.title, content);
 }
 
-function questionCard(question) {
+function questionCard(question, options = {}) {
   const card = node('article', { class: 'question-card-admin' });
   const header = node('div', { class: 'question-card-header' });
   const title = node('div');
   title.append(node('div', { class: 'badge-row' }), node('h3', {}, question.title));
   title.firstElementChild.append(statusBadge(question.status), badge(domainName(question.domain), 'domain'), badge(humanize(question.difficulty), 'muted'));
+  if (options.selectable) {
+    const select = node('label', { class: 'card-select' });
+    const input = node('input', { type: 'checkbox', class: options.selectClass || 'question-select', value: question.id });
+    input.dataset.status = question.status;
+    select.append(input, node('span', {}, 'Select'));
+    header.append(select);
+  }
   header.append(title, node('span', { class: 'score-chip' }, `${question.maximumScore} pts`));
   const description = node('p', { class: 'question-description' }, question.description || question.prompt.slice(0, 180));
   const meta = node('div', { class: 'question-meta-row' });
@@ -437,8 +453,40 @@ function buildAiPanel() {
         types,
       }) });
       output.replaceChildren();
+      const toolbar = node('div', { class: 'selection-toolbar span-full' });
+      const selectAll = checkboxField('Select all generated drafts', 'selectAllDrafts', true);
+      const saveSelected = button('Save selected drafts', 'button primary small');
+      toolbar.append(selectAll, saveSelected);
+      output.append(toolbar);
+      selectAll.querySelector('input').addEventListener('change', (changeEvent) => {
+        output.querySelectorAll('input.ai-draft-select').forEach((input) => { input.checked = changeEvent.target.checked; });
+      });
+      saveSelected.addEventListener('click', async () => {
+        const selected = Array.from(output.querySelectorAll('input.ai-draft-select:checked')).map((input) => payload.questions[Number(input.dataset.index)]);
+        if (!selected.length) {
+          showMessage('Select at least one AI draft to save.', true);
+          return;
+        }
+        saveSelected.disabled = true;
+        try {
+          const result = await api('/api/questions/import', {
+            method: 'POST',
+            body: JSON.stringify({ dryRun: false, document: { schemaVersion: 1, kind: 'quick-interview-question-drafts', questions: selected } }),
+          });
+          showMessage(`${result.imported} AI draft${result.imported === 1 ? '' : 's'} saved to the question bank.`);
+          await renderQuestions();
+        } catch (error) {
+          showMessage(error.message, true);
+        } finally {
+          saveSelected.disabled = false;
+        }
+      });
       payload.questions.forEach((draft) => {
-        const card = questionCard({ ...draft, id: '', version: 1, versionId: '', status: 'DRAFT' });
+        const index = payload.questions.indexOf(draft);
+        const card = questionCard({ ...draft, id: `draft_${index}`, version: 1, versionId: '', status: 'DRAFT' }, { selectable: true, selectClass: 'ai-draft-select' });
+        const checkbox = card.querySelector('input.ai-draft-select');
+        checkbox.checked = true;
+        checkbox.dataset.index = String(index);
         card.querySelector('.inline-actions').replaceChildren(actionButton('Save draft', async () => {
           await api('/api/questions', { method: 'POST', body: JSON.stringify(draft) });
           showMessage('AI draft saved to the question bank.');
@@ -563,6 +611,34 @@ async function renderQuestions() {
   );
   const countLabel = node('p', { class: 'list-count' });
   const list = node('div', { class: 'question-grid' });
+  const bulkBar = node('div', { class: 'selection-toolbar' });
+  const selectAllDrafts = checkboxField('Select all draft questions', 'selectAllQuestions');
+  const publishSelected = button('Publish selected', 'button primary small');
+  bulkBar.append(selectAllDrafts, publishSelected);
+  selectAllDrafts.querySelector('input').addEventListener('change', (changeEvent) => {
+    list.querySelectorAll('input.question-select').forEach((input) => {
+      input.checked = changeEvent.target.checked && input.dataset.status === 'DRAFT';
+    });
+  });
+  publishSelected.addEventListener('click', async () => {
+    const ids = Array.from(list.querySelectorAll('input.question-select:checked'))
+      .filter((input) => input.dataset.status === 'DRAFT')
+      .map((input) => input.value);
+    if (!ids.length) {
+      showMessage('Select at least one draft question to publish.', true);
+      return;
+    }
+    publishSelected.disabled = true;
+    try {
+      const result = await api('/api/questions/batch/publish', { method: 'POST', body: JSON.stringify({ questionIds: ids }) });
+      showMessage(`${result.published} question${result.published === 1 ? '' : 's'} published.`);
+      await loadList();
+    } catch (error) {
+      showMessage(error.message, true);
+    } finally {
+      publishSelected.disabled = false;
+    }
+  });
   async function loadList() {
     list.replaceChildren(loadingState('Filtering questions...'));
     const data = new FormData(filters);
@@ -571,21 +647,27 @@ async function renderQuestions() {
     const payload = await api(`/api/questions?${parameters}`);
     countLabel.textContent = `${payload.questions.length} question${payload.questions.length === 1 ? '' : 's'}`;
     list.replaceChildren();
-    payload.questions.forEach((question) => list.append(questionCard(question)));
+    selectAllDrafts.querySelector('input').checked = false;
+    payload.questions.forEach((question) => list.append(questionCard(question, { selectable: true })));
     if (!payload.questions.length) list.append(emptyState('No matching questions', 'Change the filters or create a new question.'));
   }
   filters.addEventListener('submit', (event) => {
     event.preventDefault();
     void loadList().catch((error) => showMessage(error.message, true));
   });
-  listPanel.append(filters, countLabel, list);
+  listPanel.append(filters, bulkBar, countLabel, list);
   moduleRoot.replaceChildren(header, buildQuestionForm(), buildImportPanel(), buildAiPanel(), listPanel);
   await loadList();
 }
 
 function templatePayloadFromForm(form) {
   const data = new FormData(form);
-  const selected = Array.from(form.querySelectorAll('input[name="questionVersionId"]:checked')).map((input, index) => ({
+  const selectedInputs = Array.from(form.querySelectorAll('input[name="questionVersionId"]:checked'));
+  const limitRaw = String(data.get('questionLimit') || '').trim();
+  const limit = limitRaw ? Number(limitRaw) : selectedInputs.length;
+  if (!Number.isInteger(limit) || limit < 1) throw new Error('Question limit must be a positive whole number.');
+  if (limit > selectedInputs.length) throw new Error(`Question limit is ${limit}, but only ${selectedInputs.length} selected question${selectedInputs.length === 1 ? '' : 's'} are available.`);
+  const selected = shuffled(selectedInputs).slice(0, limit).map((input, index) => ({
     questionVersionId: input.value,
     sectionKey: 'main',
     position: index + 1,
@@ -612,9 +694,17 @@ function buildTemplateForm(questions, existing, onSaved) {
   const domainSelect = domainField.querySelector('select');
   const picker = node('div', { class: 'question-picker span-full' });
   const selectedIds = new Set((existing?.questions || []).map((question) => question.questionVersionId));
+  const limitDefault = existing?.questions?.length || '';
   function refreshPicker() {
-    picker.replaceChildren(node('div', { class: 'picker-heading' }, 'Select published questions'));
     const matching = questions.filter((question) => question.domain === domainSelect.value);
+    picker.replaceChildren();
+    const pickerToolbar = node('div', { class: 'picker-heading picker-toolbar' });
+    const selectAll = checkboxField(`Select all published questions (${matching.length})`, 'selectAllTemplateQuestions');
+    pickerToolbar.append(selectAll);
+    picker.append(pickerToolbar);
+    selectAll.querySelector('input').addEventListener('change', (changeEvent) => {
+      picker.querySelectorAll('input[name="questionVersionId"]').forEach((input) => { input.checked = changeEvent.target.checked; });
+    });
     matching.forEach((question) => {
       const label = node('label', { class: 'picker-row' });
       const input = node('input', { type: 'checkbox', name: 'questionVersionId', value: question.versionId });
@@ -632,6 +722,7 @@ function buildTemplateForm(questions, existing, onSaved) {
     domainField,
     selectField('Target seniority', 'targetSeniority', ['JUNIOR', 'MID', 'SENIOR', 'EXPERT', 'MIXED'], existing?.targetSeniority || 'MID'),
     field('Duration minutes', 'durationMinutes', 'number', existing?.durationMinutes || '60', { required: true, min: 1, max: 480 }),
+    field('Question limit', 'questionLimit', 'number', limitDefault, { min: 1, max: 500, help: 'Leave blank to use all selected questions. If set, the template randomly keeps this many selected questions.' }),
     field('Description', 'description', 'textarea', existing?.description || '', { className: 'field span-full', rows: 3 }),
     checkboxField('Randomize question order for each candidate', 'randomizeQuestions', Boolean(existing?.randomizeQuestions)),
     picker,
@@ -640,17 +731,18 @@ function buildTemplateForm(questions, existing, onSaved) {
   refreshPicker();
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
-    const payload = templatePayloadFromForm(form);
-    if (!payload.questions.length) {
-      showMessage('Select at least one published question.', true);
-      return;
-    }
     try {
+      const payload = templatePayloadFromForm(form);
+      if (!payload.questions.length) {
+        showMessage('Select at least one published question.', true);
+        return;
+      }
       if (existing) await api(`/api/templates/${existing.id}`, { method: 'PUT', body: JSON.stringify(payload) });
       else await api('/api/templates', { method: 'POST', body: JSON.stringify(payload) });
       showMessage(existing ? 'Template updated as a draft.' : 'Draft template created.');
       await onSaved();
     } catch (error) {
+      alert(error.message);
       showMessage(error.message, true);
     }
   });

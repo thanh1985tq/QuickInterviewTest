@@ -24,6 +24,10 @@ const listSchema = z.object({
   tag: z.string().trim().max(100).optional(),
 }).strict();
 
+const batchPublishSchema = z.object({
+  questionIds: z.array(z.string().uuid()).min(1).max(500),
+}).strict();
+
 export function createQuestionsRouter(database: Knex): Router {
   const router = Router();
   router.get('/export.json', async (_request, response, next) => {
@@ -109,6 +113,21 @@ export function createQuestionsRouter(database: Knex): Router {
         database, questionInputSchema.parse(request.body), getAuth(response), response.locals.requestId as string | undefined,
       );
       response.status(201).json(await getQuestion(database, id));
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  router.post('/batch/publish', async (request, response, next) => {
+    try {
+      const input = batchPublishSchema.parse(request.body);
+      const uniqueIds = [...new Set(input.questionIds)];
+      const results = [];
+      for (const questionId of uniqueIds) {
+        const version = await publishQuestion(database, questionId, getAuth(response), response.locals.requestId as string | undefined);
+        results.push({ id: questionId, version, status: 'PUBLISHED' });
+      }
+      response.json({ published: results.length, questions: results });
     } catch (error) {
       next(error);
     }
