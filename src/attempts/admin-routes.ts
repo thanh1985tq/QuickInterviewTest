@@ -9,6 +9,7 @@ import { deliveryModes, nowIso } from '../domain/types.js';
 import { HttpError } from '../http/errors.js';
 import { createTestInstance } from './service.js';
 import { issueRunnerToken, latestDeployment } from '../runner/service.js';
+import { hashToken, randomToken } from '../security/crypto.js';
 
 const createSchema = z.object({
   templateId: z.string().uuid(),
@@ -134,6 +135,58 @@ export function createTestInstancesRouter(database: Knex, config: AppConfig): Ro
         });
       });
       response.json({ id: instance.candidate_id, name: input.name, email: input.email ?? null });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  router.post('/:instanceId/candidate-link', async (request, response, next) => {
+    try {
+      const instanceId = z.string().uuid().parse(request.params.instanceId);
+      const row = await database('test_instances as instances')
+        .join('candidate_attempts as attempts', 'attempts.test_instance_id', 'instances.id')
+        .where('instances.id', instanceId)
+        .select<{
+          attempt_id: string;
+          state: string;
+          available_until: string;
+        }[]>('attempts.id as attempt_id', 'attempts.state', 'instances.available_until')
+        .first();
+      if (!row) throw new HttpError(404, 'TEST_INSTANCE_NOT_FOUND', 'Test instance was not found');
+      if (['SUBMITTED', 'CANCELLED'].includes(row.state)) {
+        throw new HttpError(409, 'ATTEMPT_CLOSED', 'A submitted or cancelled attempt cannot receive a new candidate link');
+      }
+      if (new Date(row.available_until).getTime() <= Date.now()) {
+        throw new HttpError(409, 'AVAILABILITY_EXPIRED', 'The attempt availability window has already ended');
+      }
+      const candidateToken = randomToken();
+      const timestamp = nowIso();
+      const configuredExpiry = new Date(Date.now() + config.candidateTokenTtlMinutes * 60_000);
+      const tokenExpiresAt = new Date(Math.min(new Date(row.available_until).getTime(), configuredExpiry.getTime())).toISOString();
+      await database.transaction(async (transaction) => {
+        await transaction('candidate_attempts').where({ id: row.attempt_id }).update({
+          candidate_token_hash: hashToken(candidateToken),
+          token_expires_at: tokenExpiresAt,
+          updated_at: timestamp,
+        });
+        await transaction('attempt_events').insert({
+          id: randomUUID(), attempt_id: row.attempt_id, type: 'CANDIDATE_LINK_REISSUED',
+          details_json: '{}', created_at: timestamp,
+        });
+        await writeAudit(transaction, {
+          actorUserId: getAuth(response).user.id,
+          action: 'CANDIDATE_LINK_REISSUED',
+          targetType: 'CANDIDATE_ATTEMPT',
+          targetId: row.attempt_id,
+          requestId: response.locals.requestId as string | undefined,
+          details: { instanceId },
+        });
+      });
+      response.status(201).json({
+        candidateUrl: `${config.baseUrl}/test/${encodeURIComponent(candidateToken)}`,
+        tokenExpiresAt,
+        notice: 'This candidate link is shown once and is not stored in plaintext.',
+      });
     } catch (error) {
       next(error);
     }

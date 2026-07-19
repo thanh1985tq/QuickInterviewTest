@@ -206,6 +206,17 @@ function answerToText(value) {
   return String(value);
 }
 
+function showCredentialModal(title, rows) {
+  const content = node('div', { class: 'detail-stack' });
+  rows.forEach((row) => {
+    const panel = node('div', { class: 'credential-output light-output' });
+    panel.append(node('strong', {}, row.label), node(row.href ? 'a' : 'code', row.href ? { href: row.href, target: '_blank', rel: 'noreferrer' } : {}, row.value));
+    if (row.note) panel.append(node('small', {}, row.note));
+    content.append(panel);
+  });
+  modal(title, content);
+}
+
 function questionPayloadFromForm(form) {
   const data = new FormData(form);
   const type = String(data.get('type'));
@@ -854,10 +865,17 @@ async function renderAttempts() {
           durationMinutes: Number(data.get('durationMinutes')),
         }) });
         credentials.hidden = false;
-        credentials.replaceChildren(node('strong', {}, 'Save these credentials now. They are shown once.'), node('code', {}, created.candidateUrl));
-        if (created.runnerToken) credentials.append(node('small', {}, `Lab runner token: ${created.runnerToken}`));
+        credentials.replaceChildren(
+          node('strong', {}, 'Save these credentials now. They are shown once.'),
+          node('code', {}, created.candidateUrl),
+        );
+        if (created.runnerToken) {
+          credentials.append(
+            node('small', {}, `Colab runner token: ${created.runnerToken}`),
+            node('a', { href: '/lab/QuickInterviewTest.ipynb', target: '_blank', rel: 'noreferrer' }, 'Download fixed Colab runner notebook'),
+          );
+        }
         showMessage('Candidate attempt created.');
-        await renderAttempts();
       } catch (error) {
         showMessage(error.message, true);
       }
@@ -883,6 +901,32 @@ function attemptRow(instance) {
   const window = node('div');
   window.append(node('small', {}, 'Availability'), node('span', {}, `${formatDate(instance.availableFrom)} - ${formatDate(instance.availableUntil)}`));
   const actions = node('div', { class: 'inline-actions' });
+  if (!['SUBMITTED', 'CANCELLED'].includes(instance.state)) {
+    actions.append(actionButton('Reissue candidate link', async () => {
+      const issued = await api(`/api/test-instances/${instance.id}/candidate-link`, { method: 'POST', body: '{}' });
+      showCredentialModal('Candidate link', [
+        { label: 'Candidate URL', value: issued.candidateUrl, href: issued.candidateUrl, note: `Expires ${formatDate(issued.tokenExpiresAt)}. This link is shown once.` },
+      ]);
+    }, true));
+  }
+  if (instance.deliveryMode === 'COLAB_GRADIO') {
+    actions.append(node('a', { class: 'button quiet-button small', href: '/lab/QuickInterviewTest.ipynb', target: '_blank', rel: 'noreferrer' }, 'Colab notebook'));
+    if (!['SUBMITTED', 'CANCELLED', 'EXPIRED'].includes(instance.state)) {
+      actions.append(actionButton('Runner token', async () => {
+        const issued = await api(`/api/test-instances/${instance.id}/runner-token`, { method: 'POST', body: '{}' });
+        showCredentialModal('Colab runner token', [
+          { label: 'Runner token', value: issued.runnerToken, note: `Expires ${formatDate(issued.expiresAt)}. Paste this into the fixed Colab notebook.` },
+          { label: 'Notebook', value: `${window.location.origin}/lab/QuickInterviewTest.ipynb`, href: '/lab/QuickInterviewTest.ipynb' },
+        ]);
+      }, true));
+    }
+    actions.append(actionButton('Gradio link', async () => {
+      const delivery = await api(`/api/test-instances/${instance.id}/delivery`);
+      showCredentialModal('Candidate Gradio delivery', [
+        { label: 'Gradio URL', value: delivery.gradioUrl, href: delivery.gradioUrl, note: `Username: ${delivery.username || 'not required'}` },
+      ]);
+    }, true));
+  }
   actions.append(actionButton('Edit candidate', () => {
     const form = node('form', { class: 'stack-form' });
     const dialog = modal('Edit candidate', form);

@@ -273,7 +273,11 @@ details[open] > .composer-summary::before { content: "−"; }
 .credential-output { grid-column: 1 / -1; display: grid; gap: .5rem; padding: 1rem; color: #e3e8ef; background: #101828; border-radius: 12px; }
 .credential-output strong { color: #fff; font-size: .78rem; }
 .credential-output code { overflow-wrap: anywhere; color: #5eead4; font-size: .75rem; }
-.credential-output small { overflow-wrap: anywhere; color: #cbd5e1; }
+.credential-output small, .credential-output a { overflow-wrap: anywhere; color: #cbd5e1; }
+.credential-output.light-output { color: #182230; background: #f8fafc; border: 1px solid var(--line); }
+.credential-output.light-output strong { color: #182230; }
+.credential-output.light-output code, .credential-output.light-output a { color: var(--primary); }
+.credential-output.light-output small { color: #667085; }
 .result-row { grid-template-columns: minmax(180px, 1fr) minmax(220px, 1.2fr) auto auto auto; }
 .result-score strong { font-size: 1rem; }
 .result-summary { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }

@@ -113,6 +113,19 @@ describe('candidate instances and Standard Web delivery', () => {
     await request(context.app).post('/api/candidate/start').set(candidateAuth(instance.candidateToken)).send({}).expect(410);
   });
 
+  it('reissues a one-time candidate link when the original link was lost', async () => {
+    const context = await setupPublishedTemplate();
+    const instance = await createInstance(context, 'Linkless');
+    const reissued = await request(context.app).post(`/api/test-instances/${instance.instanceId}/candidate-link`)
+      .set('Cookie', context.cookie).set('X-CSRF-Token', context.csrf).send({}).expect(201);
+    const body = reissued.body as { candidateUrl: string; tokenExpiresAt: string };
+    expect(body.candidateUrl).toContain('/test/');
+    expect(body.candidateUrl).not.toBe(instance.candidateUrl);
+    await request(context.app).get('/api/candidate/attempt').set(candidateAuth(instance.candidateToken)).expect(404);
+    const newToken = body.candidateUrl.split('/test/')[1] as string;
+    await request(context.app).get('/api/candidate/attempt').set(candidateAuth(newToken)).expect(200);
+  });
+
   it('starts with a server deadline, autosaves idempotently, resumes, submits idempotently, and locks answers', async () => {
     const context = await setupPublishedTemplate();
     const instance = await createInstance(context, 'Bob');
