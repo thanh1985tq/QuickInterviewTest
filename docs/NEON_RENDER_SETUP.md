@@ -53,6 +53,9 @@ For an existing Render service:
 | `DATABASE_URL` | Pooled Neon URL. |
 | `MIGRATION_DATABASE_URL` | Direct Neon URL. |
 | `BASE_URL` | The exact Render service URL, beginning with `https://`. |
+| `OPENAI_API_URL` or `OPEN_API_URL` | Optional OpenAI-compatible AI Assistant base URL, for example `https://ollama.com/v1`. |
+| `OPENAI_API_KEY` | Optional AI Assistant provider key. |
+| `OPENAI_MODEL` | Optional AI Assistant model name, for example `gpt-oss:120b`. |
 
 Render uses `sync: false` to request secret values only when a Blueprint is first created. Adding that declaration later does not populate an existing service, so existing services must receive the new value on the **Environment** page. See Render's [environment variable guide](https://render.com/docs/configure-environment-variables) and [Blueprint reference](https://render.com/docs/blueprint-spec).
 

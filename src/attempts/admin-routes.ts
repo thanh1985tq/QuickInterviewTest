@@ -3,6 +3,7 @@ import { Router } from 'express';
 import type { Knex } from 'knex';
 import { z } from 'zod';
 import type { AppConfig } from '../config.js';
+import { writeAudit } from '../audit/service.js';
 import { getAuth } from '../auth/middleware.js';
 import { deliveryModes, nowIso } from '../domain/types.js';
 import { HttpError } from '../http/errors.js';
@@ -20,6 +21,11 @@ const createSchema = z.object({
   availableFrom: z.iso.datetime(),
   availableUntil: z.iso.datetime(),
   durationMinutes: z.number().int().positive().max(480).optional(),
+}).strict();
+
+const candidateUpdateSchema = z.object({
+  name: z.string().trim().min(1).max(300),
+  email: z.string().trim().email().max(320).nullable().optional(),
 }).strict();
 
 interface InstanceListRow {
@@ -97,6 +103,62 @@ export function createTestInstancesRouter(database: Knex, config: AppConfig): Ro
         await transaction('candidate_attempts').where({ id: attempt.id }).update({ state: 'CANCELLED', updated_at: timestamp });
         await transaction('attempt_events').insert({
           id: randomUUID(), attempt_id: attempt.id, type: 'CANCELLED', details_json: '{}', created_at: timestamp,
+        });
+      });
+      response.status(204).end();
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  router.put('/:instanceId/candidate', async (request, response, next) => {
+    try {
+      const instanceId = z.string().uuid().parse(request.params.instanceId);
+      const input = candidateUpdateSchema.parse(request.body);
+      const instance = await database<{ id: string; candidate_id: string }>('test_instances').where({ id: instanceId }).first();
+      if (!instance) throw new HttpError(404, 'TEST_INSTANCE_NOT_FOUND', 'Test instance was not found');
+      const timestamp = nowIso();
+      await database.transaction(async (transaction) => {
+        await transaction('candidates').where({ id: instance.candidate_id }).update({
+          name: input.name,
+          email: input.email?.trim().toLocaleLowerCase('en-US') || null,
+          updated_at: timestamp,
+        });
+        await writeAudit(transaction, {
+          actorUserId: getAuth(response).user.id,
+          action: 'CANDIDATE_UPDATED',
+          targetType: 'CANDIDATE',
+          targetId: instance.candidate_id,
+          requestId: response.locals.requestId as string | undefined,
+          details: { instanceId },
+        });
+      });
+      response.json({ id: instance.candidate_id, name: input.name, email: input.email ?? null });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  router.delete('/:instanceId', async (request, response, next) => {
+    try {
+      const instanceId = z.string().uuid().parse(request.params.instanceId);
+      const attempt = await database<{ id: string; state: string; test_instance_id: string }>('candidate_attempts')
+        .where({ test_instance_id: instanceId }).first();
+      if (!attempt) throw new HttpError(404, 'TEST_INSTANCE_NOT_FOUND', 'Test instance was not found');
+      if (attempt.state === 'SUBMITTED') throw new HttpError(409, 'ATTEMPT_SUBMITTED', 'A submitted attempt cannot be deleted');
+      const timestamp = nowIso();
+      await database.transaction(async (transaction) => {
+        await transaction('candidate_attempts').where({ id: attempt.id }).update({ state: 'CANCELLED', updated_at: timestamp });
+        await transaction('attempt_events').insert({
+          id: randomUUID(), attempt_id: attempt.id, type: 'CANCELLED', details_json: '{}', created_at: timestamp,
+        });
+        await writeAudit(transaction, {
+          actorUserId: getAuth(response).user.id,
+          action: 'TEST_INSTANCE_CANCELLED',
+          targetType: 'TEST_INSTANCE',
+          targetId: instanceId,
+          requestId: response.locals.requestId as string | undefined,
+          details: { attemptId: attempt.id },
         });
       });
       response.status(204).end();

@@ -2,7 +2,7 @@ import js from '@eslint/js';
 import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
-  { ignores: ['dist/**', 'coverage/**', 'data/**', 'colab/**/*.ipynb', 'public/**/*.js'] },
+  { ignores: ['dist/**', 'coverage/**', 'data/**', 'outputs/**', '.codex_tmp/**', 'colab/**/*.ipynb', 'public/**/*.js'] },
   js.configs.recommended,
   ...tseslint.configs.recommendedTypeChecked,
   {

@@ -21,6 +21,10 @@ const rawConfigSchema = z.object({
   LOGIN_MAX_FAILURES: z.coerce.number().int().min(1).max(100).default(5),
   HEARTBEAT_OFFLINE_SECONDS: z.coerce.number().int().min(10).default(90),
   DATA_RETENTION_DAYS: z.coerce.number().int().positive().default(365),
+  OPEN_API_URL: z.string().url().optional(),
+  OPENAI_API_URL: z.string().url().optional(),
+  OPENAI_API_KEY: z.string().min(1).optional(),
+  OPENAI_MODEL: z.string().min(1).optional(),
 });
 
 export type AppProfile = z.infer<typeof profileSchema>;
@@ -42,6 +46,7 @@ export interface AppConfig {
   heartbeatOfflineSeconds: number;
   dataRetentionDays: number;
   secureCookies: boolean;
+  ai: { apiUrl: string | null; apiKey: string | null; model: string | null };
 }
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
@@ -74,6 +79,11 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     heartbeatOfflineSeconds: parsed.HEARTBEAT_OFFLINE_SECONDS,
     dataRetentionDays: parsed.DATA_RETENTION_DAYS,
     secureCookies: parsed.APP_PROFILE === 'render-postgres' || parsed.NODE_ENV === 'production',
+    ai: {
+      apiUrl: (parsed.OPENAI_API_URL ?? parsed.OPEN_API_URL ?? null)?.replace(/\/$/, '') ?? null,
+      apiKey: parsed.OPENAI_API_KEY ?? null,
+      model: parsed.OPENAI_MODEL ?? null,
+    },
   };
 }
 

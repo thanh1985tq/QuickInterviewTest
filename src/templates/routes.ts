@@ -118,6 +118,16 @@ export function createTemplatesRouter(database: Knex): Router {
     }
   });
 
+  router.delete('/:templateId', async (request, response, next) => {
+    try {
+      const templateId = z.string().uuid().parse(request.params.templateId);
+      await archiveTemplate(database, templateId, getAuth(response), response.locals.requestId as string | undefined);
+      response.status(204).end();
+    } catch (error) {
+      next(error);
+    }
+  });
+
   router.get('/:templateId/preview', async (request, response, next) => {
     try {
       response.json(await previewTemplate(database, z.string().uuid().parse(request.params.templateId)));

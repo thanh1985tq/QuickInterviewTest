@@ -128,6 +128,16 @@ export function createQuestionsRouter(database: Knex): Router {
     }
   });
 
+  router.delete('/:questionId', async (request, response, next) => {
+    try {
+      const questionId = z.string().uuid().parse(request.params.questionId);
+      await archiveQuestion(database, questionId, getAuth(response), response.locals.requestId as string | undefined);
+      response.status(204).end();
+    } catch (error) {
+      next(error);
+    }
+  });
+
   router.post('/:questionId/duplicate', async (request, response, next) => {
     try {
       const id = await duplicateQuestion(

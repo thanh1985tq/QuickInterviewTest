@@ -7,6 +7,7 @@ import { rateLimit } from 'express-rate-limit';
 import type { Knex } from 'knex';
 import type { Logger } from 'pino';
 import { createAdminUsersRouter } from './admin/users.js';
+import { createAiRouter } from './ai/routes.js';
 import { createTestInstancesRouter } from './attempts/admin-routes.js';
 import { createCandidateRouter } from './attempts/candidate-routes.js';
 import { resolveCandidate } from './attempts/service.js';
@@ -95,6 +96,7 @@ export function createApp(dependencies: AppDependencies): Express {
   app.use('/api/admin', requireAuth(database, ['ADMIN']), requirePasswordChangeResolved, requireCsrfForMutations, createAdminUsersRouter(database));
   app.use('/api/domains', requireAuth(database, ['ADMIN', 'INTERVIEWER', 'REVIEWER']), requirePasswordChangeResolved, requireCsrfForMutations, createDomainsRouter(database));
   app.use('/api/questions', requireAuth(database, ['ADMIN', 'INTERVIEWER']), requirePasswordChangeResolved, requireCsrfForMutations, createQuestionsRouter(database));
+  app.use('/api/ai', requireAuth(database, ['ADMIN', 'INTERVIEWER']), requirePasswordChangeResolved, requireCsrfForMutations, createAiRouter(config));
   app.use('/api/templates', requireAuth(database, ['ADMIN', 'INTERVIEWER']), requirePasswordChangeResolved, requireCsrfForMutations, createTemplatesRouter(database));
   app.use('/api/test-instances', requireAuth(database, ['ADMIN', 'INTERVIEWER']), requirePasswordChangeResolved, requireCsrfForMutations, createTestInstancesRouter(database, config));
   app.use('/api/results', requireAuth(database, ['ADMIN', 'REVIEWER']), requirePasswordChangeResolved, requireCsrfForMutations, createResultsRouter(database));

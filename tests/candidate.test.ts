@@ -94,6 +94,25 @@ describe('candidate instances and Standard Web delivery', () => {
     expect(body.questions[0]?.scoringRubric).toBeUndefined();
   });
 
+  it('lets administrators edit candidate details and cancel an unused attempt', async () => {
+    const context = await setupPublishedTemplate();
+    const instance = await createInstance(context, 'Editable');
+    const updated = await request(context.app).put(`/api/test-instances/${instance.instanceId}/candidate`)
+      .set('Cookie', context.cookie).set('X-CSRF-Token', context.csrf)
+      .send({ name: 'Updated Candidate', email: 'updated@example.com' }).expect(200);
+    expect((updated.body as { name: string; email: string }).name).toBe('Updated Candidate');
+    const list = await request(context.app).get('/api/test-instances').set('Cookie', context.cookie).expect(200);
+    expect((list.body as { instances: Array<{ candidate: { name: string; email: string } }> }).instances[0]?.candidate)
+      .toMatchObject({ name: 'Updated Candidate', email: 'updated@example.com' });
+
+    await request(context.app).delete(`/api/test-instances/${instance.instanceId}`)
+      .set('Cookie', context.cookie).set('X-CSRF-Token', context.csrf).send({}).expect(204);
+    const cancelled = await request(context.app).get('/api/candidate/attempt')
+      .set(candidateAuth(instance.candidateToken)).expect(200);
+    expect((cancelled.body as { attempt: { state: string } }).attempt.state).toBe('CANCELLED');
+    await request(context.app).post('/api/candidate/start').set(candidateAuth(instance.candidateToken)).send({}).expect(410);
+  });
+
   it('starts with a server deadline, autosaves idempotently, resumes, submits idempotently, and locks answers', async () => {
     const context = await setupPublishedTemplate();
     const instance = await createInstance(context, 'Bob');

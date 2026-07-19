@@ -41,14 +41,16 @@ The default `.env.example` selects `local-sqlite` and writes only to the ignored
 
 1. Bootstrap an admin, then provision `INTERVIEWER` and `REVIEWER` users through `/api/admin/users`.
 2. Manage active interview disciplines through Domain Management. Archiving a domain prevents new content while preserving existing questions, templates, and results.
-3. Load the optional 40-question starter library with `npm run seed:question-bank`, or create and publish questions through `/api/questions`.
-4. Compose and publish a template through `/api/templates`.
+3. Load the optional 40-question starter library with `npm run seed:question-bank`, import a portable JSON question bank, use the optional AI Assistant, or create and publish questions through `/api/questions`.
+4. Compose, preview, edit, and publish a template through `/api/templates`.
 5. Create an independent Standard Web or Colab attempt through `/api/test-instances`. Candidate and runner tokens are disclosed only in the creation response.
 6. Standard Web candidates use `/test/{candidateToken}`. Autosave and submission write directly to the configured database.
 7. Review automatic/manual scores, comments, history, and exports through `/api/results`.
 8. For Lab Mode, use the fixed notebook at `/lab/QuickInterviewTest.ipynb` and wait for deployment state `READY` before sharing the Gradio link.
 
 Administrative mutations require the `X-CSRF-Token` returned by `/api/auth/login` or `/api/auth/session`. Candidate and runner APIs use their distinct bearer credentials.
+
+The AI Assistant is optional. Configure an OpenAI-compatible chat-completions provider with `OPENAI_API_URL` or `OPEN_API_URL`, `OPENAI_API_KEY`, and `OPENAI_MODEL`; keep the key in local environment variables or Render secrets, never in source files.
 
 ## Commands
 

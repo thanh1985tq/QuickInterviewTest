@@ -34,6 +34,10 @@ Configuration is parsed once on startup. Invalid or contradictory values fail fa
 | `LOGIN_MAX_FAILURES` | `5` | Allowed failures per account/network window. |
 | `HEARTBEAT_OFFLINE_SECONDS` | `90` | Age after which a ready deployment is offline. |
 | `DATA_RETENTION_DAYS` | `365` | Default operator retention target. |
+| `OPENAI_API_URL` | Optional | OpenAI-compatible chat completions base URL for the admin AI Assistant. |
+| `OPEN_API_URL` | Optional | Compatibility alias for `OPENAI_API_URL`. |
+| `OPENAI_API_KEY` | Optional | Provider API key for AI question generation; keep only in local/Render secrets. |
+| `OPENAI_MODEL` | Optional | Model name used by the AI Assistant, for example `gpt-oss:120b`. |
 | `BOOTSTRAP_ADMIN_EMAIL` | bootstrap only | Initial administrator email. |
 | `BOOTSTRAP_ADMIN_PASSWORD` | bootstrap only | Initial administrator password; remove after use. |
 | `SEED_ADMIN_EMAIL` | starter seed only | Existing active administrator credited as author of the starter question library; remove after use. |
