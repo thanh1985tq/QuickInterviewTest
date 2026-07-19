@@ -62,3 +62,9 @@ npm run seed:question-bank
 The command uses the normal question authoring and publication services. Each entry has a stable seed key stored in `question_library_seeds`, so rerunning the same application version does not create duplicates. The source is maintained in `src/seeds/starter-question-bank.ts`.
 
 Custom domains and manually authored questions are never overwritten or removed by this seed. Add future disciplines in the admin console under **Domains** before authoring or importing content for them.
+
+## Importing custom questions
+
+In the admin Question Bank, open **Import question bank JSON** and download the JSON template. The template uses `kind: "quick-interview-question-drafts"` and accepts an array of normal question inputs. The server creates new IDs automatically, so the file does not need UUIDs.
+
+Imported draft questions are not published automatically. Review them in the Question Bank, edit if needed, then publish the approved questions for use in templates.

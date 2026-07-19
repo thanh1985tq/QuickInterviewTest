@@ -7,7 +7,7 @@ import { fromJson, lifecycleStatuses, nowIso, toJson } from '../domain/types.js'
 import { assertActiveDomain } from '../domains/service.js';
 import { HttpError } from '../http/errors.js';
 import { questionInputSchema, type QuestionInput } from '../questions/schemas.js';
-import type { QuestionVersionRow } from '../questions/service.js';
+import { createQuestion, type QuestionVersionRow } from '../questions/service.js';
 import { templateInputSchema, type TemplateInput } from '../templates/schemas.js';
 import type { TemplateQuestionRow, TemplateVersionRow } from '../templates/service.js';
 
@@ -31,6 +31,12 @@ export const questionBankDocumentSchema = z.object({
   kind: z.literal('quick-interview-question-bank'),
   exportedAt: z.string(),
   questions: z.array(questionImportSchema).max(10_000),
+}).strict();
+
+export const questionDraftImportDocumentSchema = z.object({
+  schemaVersion: z.literal(1),
+  kind: z.literal('quick-interview-question-drafts'),
+  questions: z.array(questionInputSchema).min(1).max(10_000),
 }).strict();
 
 const templateVersionImportSchema = z.object({
@@ -143,6 +149,20 @@ async function importTags(transaction: Knex.Transaction, questionId: string, tag
 export async function importQuestionBank(
   database: Knex, rawDocument: unknown, dryRun: boolean, auth: AuthContext, requestId?: string,
 ): Promise<{ dryRun: boolean; imported: number; conflicts: ImportConflict[] }> {
+  const draftDocument = questionDraftImportDocumentSchema.safeParse(rawDocument);
+  if (draftDocument.success) {
+    for (const domain of new Set(draftDocument.data.questions.map((question) => question.domain))) {
+      await assertActiveDomain(database, domain);
+    }
+    if (dryRun) return { dryRun: true, imported: 0, conflicts: [] };
+    for (const question of draftDocument.data.questions) await createQuestion(database, question, auth, requestId);
+    await writeAudit(database, {
+      actorUserId: auth.user.id, action: 'QUESTION_DRAFTS_IMPORTED', targetType: 'QUESTION_BANK',
+      requestId, details: { count: draftDocument.data.questions.length },
+    });
+    return { dryRun: false, imported: draftDocument.data.questions.length, conflicts: [] };
+  }
+
   const document = questionBankDocumentSchema.parse(rawDocument);
   for (const domain of new Set(document.questions.flatMap((question) => question.versions.map((version) => version.data.domain)))) {
     await assertActiveDomain(database, domain);

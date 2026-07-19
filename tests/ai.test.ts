@@ -40,20 +40,13 @@ describe('AI Assistant question generation', () => {
             content: JSON.stringify({
               questions: [{
                 title: 'API automation contract checks',
-                description: 'Assesses API automation design.',
                 prompt: 'Which check belongs closest to an API contract test?',
-                domain: 'AUTOMATION_TESTING',
-                type: 'SINGLE_CHOICE',
-                difficulty: 'MID',
-                expectedDurationMinutes: 5,
-                maximumScore: 10,
+                type: 'multiple-choice',
                 choices: [
-                  { id: 'choice_1', label: 'Only compare screenshots' },
-                  { id: 'choice_2', label: 'Validate response schema and required semantics' },
+                  { id: 'choice_1', text: 'Only compare screenshots' },
+                  { id: 'choice_2', text: 'Validate response schema and required semantics' },
                 ],
-                answerKey: { correctChoiceIds: ['choice_2'] },
-                scoringRubric: '',
-                tags: ['api', 'automation'],
+                correctChoiceIds: ['choice_2'],
               }],
             }),
           },
@@ -63,11 +56,15 @@ describe('AI Assistant question generation', () => {
 
     const response = await request(context.app).post('/api/ai/questions')
       .set('Cookie', context.cookie).set('X-CSRF-Token', context.csrf)
-      .send({ domain: 'AUTOMATION_TESTING', count: 1, topic: 'API tests', difficulty: 'MID' })
+      .send({ domain: 'AUTOMATION_TESTING', count: 1, topic: 'API tests', difficulty: 'MID', types: ['SINGLE_CHOICE', 'MULTIPLE_CHOICE'] })
       .expect(200);
 
     expect(fetchMock).toHaveBeenCalledWith('https://ollama.com/v1/chat/completions', expect.objectContaining({ method: 'POST' }));
-    expect((response.body as { questions: Array<{ title: string }> }).questions[0]?.title).toBe('API automation contract checks');
+    const question = (response.body as { questions: Array<{ title: string; type: string; choices: Array<{ label: string }>; answerKey: { correctChoiceIds: string[] } }> }).questions[0];
+    expect(question?.title).toBe('API automation contract checks');
+    expect(question?.type).toBe('MULTIPLE_CHOICE');
+    expect(question?.choices[0]?.label).toBe('Only compare screenshots');
+    expect(question?.answerKey.correctChoiceIds).toEqual(['choice_2']);
   });
 
   it('returns a clear service error when AI settings are missing', async () => {

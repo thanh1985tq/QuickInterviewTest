@@ -80,6 +80,22 @@ describe('question bank and templates', () => {
     expect((duplicate.body as { id: string }).id).not.toBe(first.id);
   });
 
+  it('downloads a draft-import JSON template that can be uploaded directly', async () => {
+    const context = await authenticatedContext();
+    const template = await request(context.app).get('/api/questions/import-template.json')
+      .set('Cookie', context.cookie).expect(200);
+    const document: unknown = template.body;
+    const dryRun = await request(context.app).post('/api/questions/import')
+      .set('Cookie', context.cookie).set('X-CSRF-Token', context.csrf)
+      .send({ dryRun: true, document }).expect(200);
+    expect((dryRun.body as { conflicts: unknown[] }).conflicts).toHaveLength(0);
+    const imported = await request(context.app).post('/api/questions/import')
+      .set('Cookie', context.cookie).set('X-CSRF-Token', context.csrf)
+      .send({ dryRun: false, document }).expect(200);
+    expect((imported.body as { imported: number }).imported).toBe(1);
+    expect(await context.database('questions').count<{ count: number }[]>({ count: '*' })).toEqual([{ count: 1 }]);
+  });
+
   it('builds and versions a validated template using only published questions', async () => {
     const context = await authenticatedContext();
     const question = await request(context.app).post('/api/questions')

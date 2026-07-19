@@ -93,6 +93,9 @@ h1, h2, h3 { color: var(--ink); letter-spacing: -.025em; }
 .field-help { color: #667085; font-size: .75rem; font-weight: 500; }
 .checkbox-field { display: flex; align-items: center; gap: .7rem; padding: .8rem; color: #344054; font-size: .86rem; font-weight: 650; }
 .checkbox-field input, .picker-row input { width: 17px; height: 17px; accent-color: var(--primary); }
+.choice-group { display: flex; flex-wrap: wrap; gap: .35rem .8rem; padding: .8rem; border: 1px solid var(--line); border-radius: 12px; background: #f8fafc; }
+.choice-group legend { padding: 0 .35rem; color: #344054; font-size: .82rem; font-weight: 750; }
+.choice-group .checkbox-field { padding: .35rem .45rem; }
 .form-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; align-items: end; padding: 1.5rem 0 .25rem; }
 .form-grid > .button { justify-self: start; }
 .stack-form { display: grid; gap: 1rem; }
@@ -258,7 +261,7 @@ details[open] > .composer-summary::before { content: "−"; }
 .template-row { grid-template-columns: minmax(240px, 1.4fr) minmax(200px, .8fr) auto; }
 .template-row p { margin: .25rem 0 0; font-size: .75rem; }
 .template-metrics { display: flex !important; flex-wrap: wrap; gap: .7rem; color: #475467; font-size: .72rem; font-weight: 700; }
-.attempt-row { grid-template-columns: minmax(200px, 1fr) minmax(200px, 1fr) minmax(260px, 1.3fr) auto; }
+.attempt-row { grid-template-columns: minmax(200px, 1fr) minmax(200px, 1fr) minmax(260px, 1.3fr) auto auto; }
 .candidate-identity > div { display: grid; min-width: 0; }
 .candidate-identity p, .user-row p { margin: .1rem 0 0; color: #667085; font-size: .7rem; }
 .credential-output { grid-column: 1 / -1; display: grid; gap: .5rem; padding: 1rem; color: #e3e8ef; background: #101828; border-radius: 12px; }

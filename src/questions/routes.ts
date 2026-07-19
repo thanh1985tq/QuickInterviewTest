@@ -34,6 +34,33 @@ export function createQuestionsRouter(database: Knex): Router {
       next(error);
     }
   });
+  router.get('/import-template.json', (_request, response) => {
+    response.setHeader('Content-Disposition', 'attachment; filename="quick-interview-question-import-template.json"');
+    response.json({
+      schemaVersion: 1,
+      kind: 'quick-interview-question-drafts',
+      questions: [
+        {
+          title: 'Identify the flaky-test mitigation',
+          description: 'Checks whether the candidate understands reliable automation practices.',
+          prompt: 'Which action is the best first response when a UI automation test fails intermittently in CI?',
+          domain: 'AUTOMATION_TESTING',
+          type: 'SINGLE_CHOICE',
+          difficulty: 'JUNIOR',
+          expectedDurationMinutes: 5,
+          maximumScore: 10,
+          choices: [
+            { id: 'choice_1', label: 'Disable the test permanently' },
+            { id: 'choice_2', label: 'Investigate logs, timing, data, and isolation to find the root cause' },
+            { id: 'choice_3', label: 'Add a long fixed sleep before every action' },
+          ],
+          answerKey: { correctChoiceIds: ['choice_2'] },
+          scoringRubric: '',
+          tags: ['flaky-tests', 'ci'],
+        },
+      ],
+    });
+  });
   router.post('/import', async (request, response, next) => {
     try {
       const input = z.object({ dryRun: z.boolean().default(true), document: z.unknown() }).strict().parse(request.body);

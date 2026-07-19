@@ -357,7 +357,13 @@ function buildImportPanel() {
   const form = node('form', { class: 'form-grid' });
   const file = field('Question bank JSON file', 'document', 'file', '', { className: 'field span-full', accept: 'application/json,.json', required: true });
   const output = node('div', { class: 'credential-output span-full', hidden: '' });
-  form.append(file, button('Check import', 'button quiet-button', 'button'), button('Import questions', 'button primary', 'submit'), output);
+  form.append(
+    node('a', { class: 'button quiet-button span-full', href: '/api/questions/import-template.json' }, 'Download JSON template'),
+    file,
+    button('Check import', 'button quiet-button', 'button'),
+    button('Import questions', 'button primary', 'submit'),
+    output,
+  );
   const input = file.querySelector('input');
   async function readDocument() {
     if (!input.files?.[0]) throw new Error('Choose a JSON file first.');
@@ -391,12 +397,25 @@ function buildAiPanel() {
   panel.append(node('summary', { class: 'composer-summary' }, 'AI Assistant: generate questions'));
   const form = node('form', { class: 'form-grid' });
   const output = node('div', { class: 'ai-draft-list span-full' });
+  const formatGroup = node('fieldset', { class: 'choice-group span-full' });
+  formatGroup.append(node('legend', {}, 'Format'));
+  [
+    ['SINGLE_CHOICE', 'Single Choice'],
+    ['MULTIPLE_CHOICE', 'Multiple Choice'],
+    ['SHORT_ANSWER', 'Short Answer'],
+    ['LONG_ANSWER', 'Long Answer'],
+    ['SCENARIO', 'Scenario'],
+  ].forEach(([value, label]) => {
+    const option = checkboxField(label, 'types', value === 'SINGLE_CHOICE' || value === 'MULTIPLE_CHOICE');
+    option.querySelector('input').value = value;
+    formatGroup.append(option);
+  });
   form.append(
     selectField('Domain', 'domain', domainOptions(), activeDomains[0]?.slug || ''),
     field('Topic focus', 'topic', 'text', '', { placeholder: 'API automation, k6 analysis, CI flaky tests...' }),
     selectField('Difficulty', 'difficulty', difficulties, 'MID'),
-    selectField('Format', 'type', [{ value: '', label: 'Mixed formats' }, ...questionTypes.map((value) => ({ value, label: humanize(value) }))]),
     field('Number of questions', 'count', 'number', '5', { min: 1, max: 20 }),
+    formatGroup,
     button('Generate drafts', 'button primary', 'submit'),
     output,
   );
@@ -404,13 +423,18 @@ function buildAiPanel() {
     event.preventDefault();
     output.replaceChildren(loadingState('Asking AI Assistant...'));
     const data = new FormData(form);
+    const types = Array.from(form.querySelectorAll('input[name="types"]:checked')).map((input) => input.value);
+    if (!types.length) {
+      output.replaceChildren(emptyState('Choose at least one format', 'Select Single Choice, Multiple Choice, or another supported format.'));
+      return;
+    }
     try {
       const payload = await api('/api/ai/questions', { method: 'POST', body: JSON.stringify({
         domain: data.get('domain'),
         topic: data.get('topic'),
         difficulty: data.get('difficulty'),
         count: Number(data.get('count')),
-        ...(data.get('type') ? { type: data.get('type') } : {}),
+        types,
       }) });
       output.replaceChildren();
       payload.questions.forEach((draft) => {
@@ -784,12 +808,13 @@ function attemptRow(instance) {
       }
     });
   }, true));
-  if (instance.state !== 'SUBMITTED' && instance.state !== 'CANCELLED') actions.append(actionButton('Delete', async () => {
+  if (instance.state !== 'SUBMITTED' && instance.state !== 'CANCELLED') actions.append(actionButton('Delete candidate', async () => {
     if (!confirm('Cancel this attempt? The candidate link will stop working.')) return;
     await api(`/api/test-instances/${instance.id}`, { method: 'DELETE', body: '{}' });
     showMessage('Candidate attempt cancelled.');
     await renderAttempts();
   }, true));
+  else actions.append(node('button', { type: 'button', class: 'button quiet-button small', disabled: 'disabled', title: 'Submitted or already cancelled attempts are retained for audit.' }, 'Delete candidate'));
   record.append(identity, test, window, statusBadge(instance.state), actions);
   return record;
 }
