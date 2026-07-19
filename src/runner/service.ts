@@ -51,8 +51,6 @@ export async function issueRunnerToken(database: Knex, config: AppConfig, attemp
       id: randomUUID(), attempt_id: attemptId, token_hash: hashToken(token), expires_at: expiresAt,
       consumed_at: null, created_at: timestamp,
     });
-    await transaction('deployments').where({ attempt_id: attemptId }).whereNotIn('state', ['CLOSED', 'FAILED'])
-      .update({ state: 'CLOSED', closed_at: timestamp });
   });
   return { token, expiresAt };
 }
@@ -97,7 +95,7 @@ export async function exchangeRunnerToken(
   });
 }
 
-export async function resolveRunner(database: Knex, credential: string): Promise<RunnerContext> {
+export async function resolveRunner(database: Knex, config: AppConfig, credential: string): Promise<RunnerContext> {
   const deployment = await database<DeploymentRow>('deployments')
     .where({ runner_credential_hash: hashToken(credential) }).first();
   if (!deployment || deployment.closed_at || ['CLOSED', 'FAILED'].includes(deployment.state)) {
@@ -106,6 +104,8 @@ export async function resolveRunner(database: Knex, credential: string): Promise
   if (new Date(deployment.credential_expires_at).getTime() <= Date.now()) {
     throw new HttpError(401, 'RUNNER_CREDENTIAL_EXPIRED', 'Runner credential has expired');
   }
+  deployment.credential_expires_at = new Date(Date.now() + config.runnerCredentialTtlMinutes * 60_000).toISOString();
+  await database('deployments').where({ id: deployment.id }).update({ credential_expires_at: deployment.credential_expires_at });
   return { deployment, candidate: await getCandidateContextByAttemptId(database, deployment.attempt_id) };
 }
 

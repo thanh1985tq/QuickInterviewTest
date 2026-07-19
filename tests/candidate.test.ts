@@ -249,11 +249,12 @@ describe('candidate instances and Standard Web delivery', () => {
 
     const relaunchToken = await request(context.app).post(`/api/test-instances/${instance.instanceId}/runner-token`)
       .set('Cookie', context.cookie).set('X-CSRF-Token', context.csrf).send({}).expect(201);
-    await request(context.app).get('/api/runner/manifest').set(runnerAuth).expect(401);
+    await request(context.app).get('/api/runner/manifest').set(runnerAuth).expect(200);
     const secondExchange = await request(context.app).post('/api/runner/exchange')
       .send({ runnerToken: (relaunchToken.body as { runnerToken: string }).runnerToken }).expect(201);
     const secondCredential = (secondExchange.body as { runnerCredential: string; generation: number }).runnerCredential;
     expect((secondExchange.body as { generation: number }).generation).toBe(2);
+    await request(context.app).get('/api/runner/manifest').set(runnerAuth).expect(401);
     const recovered = await request(context.app).get('/api/runner/manifest')
       .set(candidateAuth(secondCredential)).expect(200);
     expect((recovered.body as { questions: Array<{ answer: string }> }).questions[0]?.answer).toBe('isolated');
@@ -264,5 +265,20 @@ describe('candidate instances and Standard Web delivery', () => {
     const offline = await request(context.app).get(`/api/test-instances/${instance.instanceId}/deployment`)
       .set('Cookie', context.cookie).expect(200);
     expect((offline.body as { deployment: { state: string } }).deployment.state).toBe('OFFLINE');
+  });
+
+  it('keeps an active runner credential alive while the runner continues calling the API', async () => {
+    const context = await setupPublishedTemplate();
+    const instance = await createInstance(context, 'LongRunner', 'COLAB_GRADIO');
+    const exchange = await request(context.app).post('/api/runner/exchange')
+      .send({ runnerToken: instance.runnerToken }).expect(201);
+    const runnerAuth = candidateAuth((exchange.body as { runnerCredential: string }).runnerCredential);
+    await context.database('deployments').where({ attempt_id: instance.attemptId })
+      .update({ credential_expires_at: new Date(Date.now() + 1000).toISOString() });
+    await request(context.app).post('/api/runner/heartbeat').set(runnerAuth).send({}).expect(200);
+    const refreshed = await context.database<{ credential_expires_at: string }>('deployments')
+      .where('attempt_id', instance.attemptId).first();
+    expect(new Date(refreshed?.credential_expires_at as string).getTime()).toBeGreaterThan(Date.now() + 60_000);
+    await request(context.app).get('/api/runner/manifest').set(runnerAuth).expect(200);
   });
 });

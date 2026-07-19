@@ -14,13 +14,13 @@ function getRunner(response: Parameters<RequestHandler>[1]): RunnerContext {
   return context;
 }
 
-function requireRunner(database: Knex): RequestHandler {
+function requireRunner(database: Knex, config: AppConfig): RequestHandler {
   return async (request, response, next) => {
     try {
       const authorization = request.header('authorization');
       const credential = authorization?.startsWith('Bearer ') ? authorization.slice(7) : undefined;
       if (!credential) throw new HttpError(401, 'RUNNER_CREDENTIAL_REQUIRED', 'A runner credential is required');
-      response.locals.runner = await resolveRunner(database, credential);
+      response.locals.runner = await resolveRunner(database, config, credential);
       next();
     } catch (error) {
       next(error);
@@ -46,7 +46,7 @@ export function createRunnerRouter(database: Knex, config: AppConfig): Router {
       next(error);
     }
   });
-  router.use(requireRunner(database));
+  router.use(requireRunner(database, config));
   router.get('/manifest', async (_request, response, next) => {
     try {
       response.json(await candidateManifest(database, getRunner(response).candidate));
